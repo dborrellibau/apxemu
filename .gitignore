@@ -1,0 +1,232 @@
+# APX CLI Banking Education Emulator - Git Ignore File
+# =====================================================
+
+# ===== MAVEN BUILD ARTIFACTS =====
+# Target directories for compiled code and build outputs
+target/
+# Maven-specific temporary files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ===== JAVA COMPILED FILES =====
+# Compiled Java class files
+*.class
+# Package files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+# Java heap dumps
+*.hprof
+
+# ===== REACT/NODE.JS BUILD ARTIFACTS =====
+# Node modules (dependencies)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+# Coverage directory used by tools like istanbul
+coverage/
+# nyc test coverage
+.nyc_output
+# Grunt intermediate storage
+.grunt
+# Bower dependency directory
+bower_components
+# node-waf configuration
+.lock-wscript
+# Compiled binary addons
+build/Release
+# Dependency directories
+jspm_packages/
+# TypeScript cache
+*.tsbuildinfo
+# Optional npm cache directory
+.npm
+# Optional eslint cache
+.eslintcache
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+# Optional REPL history
+.node_repl_history
+# Output of 'npm pack'
+*.tgz
+# Yarn Integrity file
+.yarn-integrity
+
+# ===== REACT BUILD OUTPUTS =====
+# React build directory
+build/
+dist/
+# Create React App production build
+/frontend/build
+/frontend/dist
+
+# ===== DEVELOPMENT & IDE FILES =====
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+.project
+.externalToolBuilders/
+.cproject
+.autotools
+.factorypath
+.buildpath
+.target
+.tern-project
+.texlipse
+.springBeans
+.recommenders/
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+# VS Code
+.vscode/
+*.code-workspace
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ===== LOGS =====
+# Log files
+logs
+*.log
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ===== OPERATING SYSTEM FILES =====
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== SPRING BOOT & APPLICATION-SPECIFIC =====
+# Spring Boot DevTools restart files
+.reloadtrigger
+# H2 Database files (if persisted to disk)
+*.db
+*.trace.db
+*.lock.db
+# Application logs
+application.log*
+spring.log*
+
+# ===== MISC DEVELOPMENT FILES =====
+# Temporary files
+.tmp/
+temp/
+# Cache directories
+.cache/
+# Package-lock files (if using yarn)
+package-lock.json
+# Environment variables files (sensitive data)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# ESLint cache
+.eslintcache
+# Prettier cache
+.prettiercache
+# Jest cache
+jest/
+# Coverage reports
+coverage.xml
+
+# ===== VERSION CONTROL & DEPLOYMENT =====
+# Git merge artifacts
+*.orig
+# Backup files
+*.backup
+*.bak
+# Deploy keys or sensitive files
+*.pem
+*.key
+deploy_key
+# Docker
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+
+# ===== APX CLI PROJECT SPECIFIC =====
+# Any project-specific temporary files
+.apx/
+# Banking simulation data (if persisted)
+simulation-data/
+test-data/
+# Architecture diagram exports
+diagrams/export/
+# Demo recordings
+demos/
+recordings/
