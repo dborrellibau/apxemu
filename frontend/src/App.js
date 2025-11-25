@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Terminal from './components/Terminal';
-import HierarchicalRenderer from './components/HierarchicalRenderer';
+import ReactFlowDiagram from './components/ReactFlowDiagram';
 import webSocketService from './services/WebSocketService'; // Import singleton instance
 import './App.css';
 
@@ -48,7 +48,7 @@ function App() {
         </div>
         
         <div className="diagram-panel">
-          <HierarchicalRenderer data={diagramData} />
+          <ReactFlowDiagram data={diagramData} />
         </div>
       </div>
     </div>
