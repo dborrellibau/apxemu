@@ -32,6 +32,8 @@ buildNumber.properties
 # ===== REACT/NODE.JS BUILD ARTIFACTS =====
 # Node modules (dependencies)
 node_modules/
+# Node.js local binaries
+node/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
