@@ -83,7 +83,6 @@ export const convertToReactFlow = (hierarchicalData) => {
  */
 const calculatePosition = (level, indexAtLevel) => {
   const LEVEL_HEIGHT = 150;
-  const NODE_WIDTH = 200;
   const HORIZONTAL_SPACING = 250;
   
   return {
