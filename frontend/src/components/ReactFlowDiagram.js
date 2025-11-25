@@ -82,20 +82,23 @@ const ReactFlowDiagram = ({ data }) => {
       >
         <Controls />
         <MiniMap 
-          nodeStrokeColor="#374151"
-          nodeColor="#d1d5db" 
+          nodeStrokeColor="#6b7280"
+          nodeColor="#374151" 
           nodeBorderRadius={4}
           pannable
           zoomable
           position="bottom-left"
+          style={{
+            backgroundColor: 'rgba(45, 45, 45, 0.95)'
+          }}
         />
         <Background 
           variant="dots" 
           gap={24} 
           size={1.5} 
-          color="rgba(148, 163, 184, 0.4)"
+          color="rgba(107, 114, 128, 0.3)"
           style={{
-            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+            background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
           }}
         />
       </ReactFlow>

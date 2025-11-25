@@ -114,27 +114,27 @@ const getEdgeStyle = (sourceContainer, targetContainer) => {
 };
 
 /**
- * Get edge color based on target container type
+ * Get edge color based on target container type - optimized for dark theme
  */
 const getEdgeColor = (entityType, folderType) => {
   if (entityType === 'DeploymentUnit') {
-    return '#1e40af'; // Blue for deployment units
+    return '#60a5fa'; // Brighter blue for dark background
   }
   
   if (entityType === 'ComponentFolder') {
     switch (folderType?.toLowerCase()) {
       case 'library':
-        return '#059669'; // Green for library
+        return '#34d399'; // Brighter green for library
       case 'transactions':
-        return '#dc2626'; // Red for transactions
+        return '#f87171'; // Brighter red for transactions
       case 'dto':
-        return '#7c3aed'; // Purple for DTOs
+        return '#a78bfa'; // Brighter purple for DTOs
       default:
-        return '#6b7280'; // Gray for unknown
+        return '#9ca3af'; // Light gray for unknown
     }
   }
   
-  return '#6b7280'; // Default gray
+  return '#9ca3af'; // Default light gray
 };
 
 /**

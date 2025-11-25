@@ -2,21 +2,21 @@
 .react-flow-container {
   height: 100%;
   width: 100%;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   position: relative;
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1), 
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+    0 4px 6px -1px rgba(0, 0, 0, 0.3), 
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(64, 64, 64, 0.8);
 }
 
 .react-flow-container.empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%);
 }
 
 .react-flow-header {
@@ -24,51 +24,51 @@
   top: 16px;
   left: 20px;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(45, 45, 45, 0.95);
   backdrop-filter: blur(12px);
   padding: 14px 18px;
   border-radius: 10px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgba(80, 80, 80, 0.8);
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
 .react-flow-header h3 {
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 .item-count {
   font-size: 12px;
-  color: #64748b;
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  color: #cbd5e1;
+  background: linear-gradient(135deg, #374151, #4b5563);
   padding: 6px 10px;
   border-radius: 6px;
   font-weight: 600;
   letter-spacing: 0.025em;
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  border: 1px solid rgba(75, 85, 99, 0.6);
 }
 
 .empty-state {
   text-align: center;
   padding: 48px;
   max-width: 420px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(45, 45, 45, 0.9);
   border-radius: 16px;
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed #6b7280;
   backdrop-filter: blur(12px);
   box-shadow: 
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    0 10px 15px -3px rgba(0, 0, 0, 0.3),
+    0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 .empty-state h4 {
   margin: 0 0 12px 0;
-  color: #475569;
+  color: #f1f5f9;
   font-size: 20px;
   font-weight: 700;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -76,63 +76,63 @@
 
 .empty-state p {
   margin: 0 0 18px 0;
-  color: #64748b;
+  color: #cbd5e1;
   font-size: 15px;
   line-height: 1.6;
   font-weight: 500;
 }
 
 .empty-state code {
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
-  color: #3730a3;
+  background: linear-gradient(135deg, #374151, #4b5563);
+  color: #a78bfa;
   padding: 10px 16px;
   border-radius: 8px;
   font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
   font-size: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #6b7280;
   font-weight: 700;
   box-shadow: 
-    0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ReactFlow Control Customizations */
 .react-flow__controls {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(45, 45, 45, 0.95) !important;
   backdrop-filter: blur(12px) !important;
   border-radius: 10px !important;
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border: 1px solid rgba(75, 85, 99, 0.8) !important;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
   padding: 4px !important;
 }
 
 .react-flow__controls-button {
   background: transparent !important;
   border: none !important;
-  color: #475569 !important;
+  color: #cbd5e1 !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   border-radius: 6px !important;
   margin: 2px !important;
 }
 
 .react-flow__controls-button:hover {
-  background: #f1f5f9 !important;
-  color: #1e293b !important;
+  background: #374151 !important;
+  color: #f1f5f9 !important;
   transform: scale(1.05);
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.3);
 }
 
 /* ReactFlow MiniMap Customizations */
 .react-flow__minimap {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(45, 45, 45, 0.95) !important;
   backdrop-filter: blur(12px) !important;
   border-radius: 10px !important;
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border: 1px solid rgba(75, 85, 99, 0.8) !important;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* ReactFlow Background Customizations */
@@ -158,21 +158,33 @@
     0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Enhanced Edge Styles */
+/* Enhanced Edge Styles for dark theme */
 .react-flow__edge {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.react-flow__edge .react-flow__edge-path {
+  stroke-width: 2.5px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke-width: 3px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  stroke-width: 3.5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #3b82f6 !important;
+  stroke: #60a5fa !important;
   stroke-width: 4px !important;
-  filter: drop-shadow(0 2px 6px rgba(59, 130, 246, 0.4));
+  filter: drop-shadow(0 2px 6px rgba(96, 165, 250, 0.6));
+}
+
+/* Enhanced arrow markers for better visibility */
+.react-flow__edge .react-flow__arrowhead {
+  fill: inherit;
+  stroke: inherit;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
 /* Custom scrollbar for better aesthetics */
@@ -182,18 +194,18 @@
 }
 
 .react-flow-container::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.5);
+  background: rgba(55, 65, 81, 0.5);
   border-radius: 4px;
 }
 
 .react-flow-container::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.8);
+  background: rgba(107, 114, 128, 0.8);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .react-flow-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
+  background: rgba(156, 163, 175, 0.9);
 }
 
 /* Enhanced animations */
