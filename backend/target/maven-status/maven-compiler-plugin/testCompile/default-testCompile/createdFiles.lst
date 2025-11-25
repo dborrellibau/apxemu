@@ -1,0 +1,7 @@
+com\bank\education\apxcli\service\ArchitectureServicesIntegrationTest.class
+com\bank\education\apxcli\service\DeploymentUnitQueryServiceTest.class
+com\bank\education\apxcli\service\ArchitectureServicesPerformanceTest.class
+com\bank\education\apxcli\service\DependencyManagementServiceTest.class
+com\bank\education\apxcli\service\ArchitectureOrchestrationServiceTest.class
+com\bank\education\apxcli\service\ContainableValidationServiceTest.class
+com\bank\education\apxcli\service\ContainableInfoServiceTest.class

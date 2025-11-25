@@ -1,0 +1,222 @@
+/* HierarchicalRenderer.css - Simple CSS for hierarchical display */
+
+.hierarchical-renderer {
+  padding: 20px;
+  background-color: #1a1a1a;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.hierarchical-renderer.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-message {
+  text-align: center;
+  color: #999;
+}
+
+.empty-message h4 {
+  color: #ccc;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.empty-message p {
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.empty-message code {
+  background-color: #0c0c0c;
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: #00ff00;
+  border: 1px solid #333;
+  display: inline-block;
+}
+
+.renderer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #333;
+}
+
+.renderer-header h3 {
+  margin: 0;
+  color: #00ff00;
+  font-size: 1.3rem;
+}
+
+.item-count {
+  background-color: #2d2d2d;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.containers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Container Styles */
+.container {
+  border: 2px solid #555;
+  border-radius: 8px;
+  background-color: #2d2d2d;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.container.level-0 {
+  border-color: #00ff00;
+}
+
+.container.level-1 {
+  border-color: #ffff00;
+  margin-left: 30px;
+  background-color: #252525;
+}
+
+.container.level-2 {
+  border-color: #ff6600;
+  margin-left: 60px;
+  background-color: #202020;
+}
+
+.container.level-3 {
+  border-color: #ff0066;
+  margin-left: 90px;
+  background-color: #1b1b1b;
+}
+
+/* DeploymentUnit specific styles */
+.container.deployment-unit {
+  border-left: 6px solid #00aaff;
+}
+
+.container.deployment-unit.level-0 {
+  background-color: #1a2e1a;
+}
+
+/* ComponentFolder specific styles */
+.container.component-folder {
+  border-left: 6px solid #ffaa00;
+  background-color: #2e1e1a;
+}
+
+.container-header {
+  padding: 15px;
+  border-bottom: 1px solid #555;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.container-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.container-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.container-type {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.du-type {
+  background-color: #0066cc;
+  color: #ffffff;
+}
+
+.folder-type {
+  background-color: #cc6600;
+  color: #ffffff;
+}
+
+.container-details {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.detail {
+  background-color: #444;
+  color: #ccc;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.container-description {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* Children Container */
+.children-container {
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hierarchical-renderer {
+    padding: 10px;
+  }
+  
+  .renderer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .container.level-1,
+  .container.level-2,
+  .container.level-3 {
+    margin-left: 15px;
+  }
+  
+  .container-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+}
+
+/* Hover effects */
+.container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.container-header:hover .container-name {
+  color: #00ff00;
+  transition: color 0.2s ease;
+}
