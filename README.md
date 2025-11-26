@@ -43,7 +43,7 @@ Each deployment unit contains three component folders:
 help                           # Show available commands
 create <type> <name>          # Create deployment unit (artifact|service|module)
 list [type]                   # List all or filtered deployment units
-connect <source> <target>     # Create dependency between units
+dep <source> <target>         # Create dependency between units
 show <name>                   # Show detailed information about a unit
 clear                         # Remove all deployment units
 ```
@@ -52,7 +52,7 @@ clear                         # Remove all deployment units
 ```bash
 apx> create artifact customer-service
 apx> create artifact account-service
-apx> connect customer-service account-service
+apx> dep customer-service account-service
 apx> list artifacts
 apx> show customer-service
 ```

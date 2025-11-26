@@ -79,8 +79,8 @@ public class CommandParserService {
             response = handleAddCommand(sessionId, args);
         } else if ("list".equals(command)) {
             response = handleListCommand(args);
-        } else if ("connect".equals(command)) {
-            response = handleConnectCommand(args);
+        } else if ("dep".equals(command)) {
+            response = handleDepCommand(args);
         } else if ("show".equals(command)) {
             response = handleShowCommand(args);
         } else if ("clear".equals(command)) {
@@ -115,7 +115,7 @@ public class CommandParserService {
             "add                      - Add component in current directory", 
             "pwd                      - Show current directory",
             "list [type]              - List deployment units",
-            "connect <source> <target> - Create dependency between units",
+            "dep <source> <target>    - Create dependency between units",
             "show <name>              - Show details of a deployment unit", 
             "clear                    - Clear all deployment units",
             "debug-du <name>          - Debug deployment unit details",
@@ -128,7 +128,7 @@ public class CommandParserService {
             "  apx add                  - Add component to current folder",
             "  apx pwd                  - Show current directory",
             "  apx list du-online",
-            "  apx connect customer-service account-service",
+            "  apx dep customer-service account-service",
             "  apx show customer-service"
         );
         
@@ -158,9 +158,9 @@ public class CommandParserService {
         return architectureService.listDeploymentUnits(type);
     }
     
-    private CommandResponse handleConnectCommand(String[] args) {
+    private CommandResponse handleDepCommand(String[] args) {
         if (args.length < 2) {
-            return CommandResponse.error("Connect command requires source and target names");
+            return CommandResponse.error("Dep command requires source and target names");
         }
         
         String sourceName = args[0];
