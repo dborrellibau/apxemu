@@ -13,7 +13,7 @@ const Terminal = ({ wsService, isConnected }) => {
   useEffect(() => {
     // Add welcome message
     setHistory([
-      { type: 'info', content: 'APX CLI Banking Education Emulator' },
+      { type: 'info', content: 'Welcome to V-Ether' },
       { type: 'info', content: 'Type "help" for available commands' },
       { type: 'prompt', content: '' }
     ]);
@@ -193,7 +193,7 @@ const Terminal = ({ wsService, isConnected }) => {
   return (
     <div className="terminal" onClick={handleTerminalClick}>
       <div className="terminal-header">
-        <div className="terminal-title">APX CLI Terminal</div>
+        <div className="terminal-title">V-Ether Terminal</div>
         <div className={`connection-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
           {isConnected ? 'Connected' : 'Disconnected'}
         </div>

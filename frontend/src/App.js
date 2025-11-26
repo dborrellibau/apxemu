@@ -36,7 +36,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>APX CLI Banking Education Emulator</h1>
+        <h1>V-Ether</h1>
         <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
           {isConnected ? '● Connected' : '● Disconnected'}
         </div>

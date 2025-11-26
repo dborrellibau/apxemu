@@ -81,6 +81,11 @@ dist/
 # Create React App production build
 /frontend/build
 /frontend/dist
+# React static assets copied to Spring Boot
+backend/src/main/resources/static/static/
+backend/src/main/resources/static/asset-manifest.json
+backend/src/main/resources/static/manifest.json
+backend/src/main/resources/static/index.html
 
 # ===== DEVELOPMENT & IDE FILES =====
 # IntelliJ IDEA
