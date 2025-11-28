@@ -5,10 +5,12 @@ import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.form.FormBuilder;
 import com.bank.education.apxcli.form.FormField;
+import com.bank.education.apxcli.model.DeploymentUnit;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,10 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommandParserService {
     
     private final ArchitectureOrchestrationService architectureService;
+    private final DeploymentUnitNavigationService navigationService;
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
-    public CommandParserService(ArchitectureOrchestrationService architectureService) {
+    public CommandParserService(ArchitectureOrchestrationService architectureService,
+                               DeploymentUnitNavigationService navigationService) {
         this.architectureService = architectureService;
+        this.navigationService = navigationService;
         // Clear any residual sessions on startup
         this.activeSessions.clear();
     }
@@ -241,9 +246,9 @@ public class CommandParserService {
                 return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
             }
             
-            // Validate folder name
-            if (!folder.equals("dto") && !folder.equals("transactions") && !folder.equals("library")) {
-                return CommandResponse.error("Invalid folder. Valid folders: dto, transactions, library");
+            // Validate folder name using navigation service
+            if (!navigationService.isValidFolder(duName, folder)) {
+                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
             }
             
             sessionState.setCurrentDirectory(duName + "/" + folder);
@@ -263,9 +268,9 @@ public class CommandParserService {
             // From deployment unit, can navigate to folders
             String duName = currentDir;
             
-            // Validate folder name
-            if (!target.equals("dto") && !target.equals("transactions") && !target.equals("library")) {
-                return CommandResponse.error("Invalid folder. Valid folders: dto, transactions, library");
+            // Validate folder name using navigation service
+            if (!navigationService.isValidFolder(duName, target)) {
+                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
             }
             
             sessionState.setCurrentDirectory(duName + "/" + target);
@@ -730,6 +735,7 @@ public class CommandParserService {
                 default:
                     return CommandResponse.error("Unknown form type: " + formType);
             }
+        } catch (Exception e) {
             return CommandResponse.error("Error creating " + formType + ": " + e.getMessage());
         }
     }
@@ -778,15 +784,16 @@ public class CommandParserService {
             // List deployment units in root
             return architectureService.listDeploymentUnits(null);
         } else if (!currentDir.contains("/")) {
-            // In deployment unit, list folders
-            List<String> folders = Arrays.asList(
-                "dto/        - Data Transfer Objects folder",
-                "transactions/ - Business transactions folder", 
-                "library/     - Library components folder"
-            );
+            // In deployment unit, list folders specific to DU type
+            List<String> folders = navigationService.getValidFolders(currentDir);
+            List<String> formattedFolders = new ArrayList<>();
+            
+            for (String folder : folders) {
+                formattedFolders.add(folder + "/        - " + getFolderDescription(currentDir, folder));
+            }
             
             CommandResponse response = new CommandResponse(true, "Contents of " + currentDir + ":", 
-                folders, CommandResponse.ResponseType.INFO, null);
+                formattedFolders, CommandResponse.ResponseType.INFO, null);
             return response;
         } else {
             // In specific folder, list components within that folder
@@ -795,6 +802,26 @@ public class CommandParserService {
             String folder = pathParts[1];
             
             return architectureService.listComponentsInFolder(duName, folder);
+        }
+    }
+    
+    private String getFolderDescription(String duName, String folderName) {
+        DeploymentUnit.DeploymentUnitType duType = navigationService.getTypeWithCache(duName);
+        
+        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
+            if (folderName.endsWith("IMPL")) {
+                return "Implementation library components";
+            } else {
+                return "Base library components";
+            }
+        } else {
+            // DU_ONLINE descriptions
+            switch (folderName.toLowerCase()) {
+                case "dto": return "Data Transfer Objects folder";
+                case "transactions": return "Business transactions folder";
+                case "library": return "Library components folder";
+                default: return "Component folder";
+            }
         }
     }
     

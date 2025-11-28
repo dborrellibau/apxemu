@@ -177,8 +177,12 @@ public class ContainableInfoService {
         }
         
         DeploymentUnit du = duOpt.get();
+        
+        // Map user folder name to internal folder type
+        String internalFolderType = mapUserFolderToInternal(folderName, du);
+        
         Optional<ComponentFolder> folderOpt = du.getComponentFolders().stream()
-            .filter(folder -> folderName.equals(folder.getType().toString().toLowerCase()))
+            .filter(folder -> internalFolderType.equals(folder.getType().toString().toLowerCase()))
             .findFirst();
             
         if (!folderOpt.isPresent()) {
@@ -202,5 +206,18 @@ public class ContainableInfoService {
             CommandResponse.ResponseType.INFO,
             null
         );
+    }
+    
+    /**
+     * Map user folder name to internal folder type for different DU types
+     */
+    private String mapUserFolderToInternal(String userFolderName, DeploymentUnit du) {
+        if (du.getType() == DeploymentUnit.DeploymentUnitType.DU_LIB) {
+            // For DU-LIB: detect by IMPL suffix
+            return userFolderName.endsWith("IMPL") ? "impl" : "base";
+        }
+        
+        // For DU-ONLINE: direct mapping
+        return userFolderName.toLowerCase();
     }
 }
