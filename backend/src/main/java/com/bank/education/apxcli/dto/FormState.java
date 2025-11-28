@@ -89,9 +89,9 @@ public class FormState {
     
     public String getCurrentPrompt() {
         if ("root".equals(currentDirectory)) {
-            return "apx> ";
+            return "vether> ";
         } else {
-            return "apx:" + currentDirectory + "> ";
+            return "vether/" + currentDirectory + "> ";
         }
     }
 }

@@ -69,36 +69,31 @@ public class CommandParserService {
         
         CommandResponse response;
         
-        if ("help".equals(command)) {
-            response = showHelp();
-        } else if ("init".equals(command)) {
-            response = handleInitCommand(args);
-        } else if ("cd".equals(command)) {
+        // Standard terminal commands (without apx prefix)
+        if ("cd".equals(command)) {
             response = handleCdCommand(sessionId, args);
-        } else if ("add".equals(command)) {
-            response = handleAddCommand(sessionId, args);
-        } else if ("list".equals(command)) {
-            response = handleListCommand(args);
-        } else if ("dep".equals(command)) {
-            response = handleDepCommand(args);
-        } else if ("show".equals(command)) {
-            response = handleShowCommand(args);
-        } else if ("clear".equals(command)) {
-            response = handleClearCommand();
-        } else if ("debug-du".equals(command)) {
-            response = handleDebugDuCommand(args);
         } else if ("pwd".equals(command)) {
             response = handlePwdCommand(sessionId);
-        } else if ("reset".equals(command)) {
-            response = handleResetSessionCommand(sessionId);
-        } else if ("reset-all".equals(command)) {
-            response = handleResetAllSessionsCommand();
-        } else if ("debug".equals(command)) {
-            response = handleDebugSessionsCommand();
-        } else if ("test".equals(command)) {
-            response = CommandResponse.success("Test command works! Args: " + String.join(", ", args));
+        } else if ("ls".equals(command)) {
+            response = handleLsCommand(sessionId, args);
+        } else if ("clear".equals(command)) {
+            response = handleClearCommand();
+        } else if ("exit".equals(command)) {
+            response = handleExitCommand();
+        } 
+        // APX-prefixed commands
+        else if ("apx".equals(command)) {
+            response = handleApxCommand(sessionId, args);
+        } 
+        // Legacy support - suggest using apx prefix
+        else if ("help".equals(command) || "init".equals(command) || "add".equals(command) || 
+                 "list".equals(command) || "dep".equals(command) || "show".equals(command) ||
+                 "debug-du".equals(command) || "reset".equals(command) || "reset-all".equals(command) ||
+                 "debug".equals(command) || "test".equals(command)) {
+            response = CommandResponse.error("Command '" + command + "' requires 'apx' prefix. Use: apx " + command + 
+                " (Type 'apx help' for available commands)");
         } else {
-            response = CommandResponse.error("Unknown command: " + command + ". Type 'help' for available commands.");
+            response = CommandResponse.error("Unknown command: " + command + ". Type 'apx help' for available commands.");
         }
         
         // Set the current prompt based on session state
@@ -108,28 +103,36 @@ public class CommandParserService {
     
     private CommandResponse showHelp() {
         List<String> helpText = Arrays.asList(
-            "APX CLI Emulator - Available Commands:",
+            "V-Ether - Available Commands:",
             "",
-            "init                     - Show interactive banking component menu",
-            "cd <du-name>/<folder>    - Navigate to deployment unit folder",
-            "add                      - Add component in current directory", 
-            "pwd                      - Show current directory",
-            "list [type]              - List deployment units",
-            "dep <source> <target>    - Create dependency between units",
-            "show <name>              - Show details of a deployment unit", 
-            "clear                    - Clear all deployment units",
-            "debug-du <name>          - Debug deployment unit details",
-            "reset                    - Reset current form session",
-            "help                     - Show this help message",
+            "=== Standard Terminal Commands ===",
+            "cd <directory>           - Navigate to deployment unit or folder",
+            "cd ..                    - Go back to parent directory", 
+            "cd                       - Show current directory",
+            "pwd                      - Show current directory path",
+            "ls                       - List contents of current directory",
+            "clear                    - Clear terminal screen",
+            "exit                     - Exit the terminal",
             "",
-            "Examples:",
-            "  apx init                 - Show interactive banking component menu",
-            "  apx cd customer-service/dto - Navigate to DTO folder",
-            "  apx add                  - Add component to current folder",
-            "  apx pwd                  - Show current directory",
-            "  apx list du-online",
-            "  apx dep customer-service account-service",
-            "  apx show customer-service"
+            "=== APX Commands ===",
+            "apx init                 - Show interactive banking component menu",
+            "apx add                  - Add component in current directory", 
+            "apx list [type]          - List deployment units",
+            "apx dep <source> <target> - Create dependency between units",
+            "apx show <name>          - Show details of a deployment unit", 
+            "apx help                 - Show this help message",
+            "",
+            "=== Navigation Examples ===",
+            "cd customer-service      - Navigate to deployment unit",
+            "cd dto                   - Navigate to dto folder (from DU)",
+            "cd customer-service/dto  - Direct navigation to folder",
+            "cd ..                    - Go back one level",
+            "",
+            "=== APX Examples ===",
+            "apx init                 - Start interactive component creation",
+            "apx list du-online       - List online deployment units",
+            "apx dep customer-service account-service - Create dependency",
+            "apx show customer-service - Show DU details"
         );
         
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
@@ -183,41 +186,94 @@ public class CommandParserService {
     }
     
     private CommandResponse handleCdCommand(String sessionId, String[] args) {
+        FormState sessionState = getOrCreateSessionState(sessionId);
+        String currentDir = sessionState.getCurrentDirectory();
+        
         if (args.length == 0) {
-            // cd without arguments goes to root
-            FormState sessionState = getOrCreateSessionState(sessionId);
-            sessionState.setCurrentDirectory("root");
-            return CommandResponse.success("Changed to root directory");
+            // cd without arguments shows current directory
+            return CommandResponse.success("Current directory: " + 
+                ("root".equals(currentDir) ? "/vether" : "/vether/" + currentDir));
         }
         
         if (args.length != 1) {
-            return CommandResponse.error("Usage: cd <du-name>/<folder> or cd (for root)");
+            return CommandResponse.error("Usage: cd <directory>, cd .. (go back), or cd (show current directory)");
         }
         
-        String path = args[0];
-        String[] pathParts = path.split("/");
+        String target = args[0];
         
-        if (pathParts.length != 2) {
-            return CommandResponse.error("Invalid path format. Use: <du-name>/<folder>");
+        // Handle cd .. (go back)
+        if ("..".equals(target)) {
+            if ("root".equals(currentDir)) {
+                return CommandResponse.error("Already at root directory");
+            }
+            
+            // If we're in a subfolder, go back to parent
+            if (currentDir.contains("/")) {
+                String[] parts = currentDir.split("/");
+                if (parts.length == 2) {
+                    // From du/folder back to root
+                    sessionState.setCurrentDirectory("root");
+                    return CommandResponse.success("Changed directory to /vether");
+                }
+                // If there were more levels, go up one level
+                sessionState.setCurrentDirectory(parts[0]);
+                return CommandResponse.success("Changed directory to /vether/" + parts[0]);
+            } else {
+                // From deployment unit back to root
+                sessionState.setCurrentDirectory("root");
+                return CommandResponse.success("Changed directory to /vether");
+            }
         }
         
-        String duName = pathParts[0];
-        String folder = pathParts[1];
-        
-        // Validate that the DU exists
-        if (!architectureService.containableExists(duName, null)) {
-            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
+        // Handle absolute path navigation (du-name/folder)
+        if (target.contains("/")) {
+            String[] pathParts = target.split("/");
+            
+            if (pathParts.length != 2) {
+                return CommandResponse.error("Invalid path format. Use: <du-name>/<folder>");
+            }
+            
+            String duName = pathParts[0];
+            String folder = pathParts[1];
+            
+            // Validate that the DU exists
+            if (!architectureService.containableExists(duName, null)) {
+                return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
+            }
+            
+            // Validate folder name
+            if (!folder.equals("dto") && !folder.equals("transactions") && !folder.equals("library")) {
+                return CommandResponse.error("Invalid folder. Valid folders: dto, transactions, library");
+            }
+            
+            sessionState.setCurrentDirectory(duName + "/" + folder);
+            return CommandResponse.success("Changed directory to /vether/" + target);
         }
         
-        // Validate folder name
-        if (!folder.equals("dto") && !folder.equals("transactions") && !folder.equals("lib")) {
-            return CommandResponse.error("Invalid folder. Valid folders: dto, transactions, lib");
+        // Handle single directory navigation
+        if ("root".equals(currentDir)) {
+            // From root, can only navigate to existing deployment units
+            if (!architectureService.containableExists(target, null)) {
+                return CommandResponse.error("Deployment unit '" + target + "' does not exist. Use 'apx list' to see available deployment units.");
+            }
+            
+            sessionState.setCurrentDirectory(target);
+            return CommandResponse.success("Changed directory to /vether/" + target);
+        } else if (!currentDir.contains("/")) {
+            // From deployment unit, can navigate to folders
+            String duName = currentDir;
+            
+            // Validate folder name
+            if (!target.equals("dto") && !target.equals("transactions") && !target.equals("library")) {
+                return CommandResponse.error("Invalid folder. Valid folders: dto, transactions, library");
+            }
+            
+            sessionState.setCurrentDirectory(duName + "/" + target);
+            return CommandResponse.success("Changed directory to /vether/" + duName + "/" + target);
+        } else {
+            // From folder level, cannot navigate further down
+            return CommandResponse.error("Cannot navigate deeper. Use 'cd ..' to go back or provide a full path.");
         }
-        
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        sessionState.setCurrentDirectory(duName + "/" + folder);
-        
-        return CommandResponse.success("Changed directory to " + path);
     }
     
     private CommandResponse handleAddCommand(String sessionId, String[] args) {
@@ -277,7 +333,8 @@ public class CommandParserService {
     private CommandResponse handlePwdCommand(String sessionId) {
         FormState sessionState = getOrCreateSessionState(sessionId);
         String currentDir = sessionState.getCurrentDirectory();
-        return CommandResponse.success("Current directory: " + currentDir);
+        String displayPath = "root".equals(currentDir) ? "/vether" : "/vether/" + currentDir;
+        return CommandResponse.success(displayPath);
     }
     
     private CommandResponse handleResetSessionCommand(String sessionId) {
@@ -673,8 +730,75 @@ public class CommandParserService {
                 default:
                     return CommandResponse.error("Unknown form type: " + formType);
             }
-        } catch (Exception e) {
             return CommandResponse.error("Error creating " + formType + ": " + e.getMessage());
         }
+    }
+    
+    private CommandResponse handleApxCommand(String sessionId, String[] args) {
+        if (args.length == 0) {
+            return CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
+        }
+        
+        String subCommand = args[0].toLowerCase();
+        String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+        
+        switch (subCommand) {
+            case "help":
+                return showHelp();
+            case "init":
+                return handleInitCommand(subArgs);
+            case "add":
+                return handleAddCommand(sessionId, subArgs);
+            case "list":
+                return handleListCommand(subArgs);
+            case "dep":
+                return handleDepCommand(subArgs);
+            case "show":
+                return handleShowCommand(subArgs);
+            case "debug-du":
+                return handleDebugDuCommand(subArgs);
+            case "reset":
+                return handleResetSessionCommand(sessionId);
+            case "reset-all":
+                return handleResetAllSessionsCommand();
+            case "debug":
+                return handleDebugSessionsCommand();
+            case "test":
+                return CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
+            default:
+                return CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
+        }
+    }
+    
+    private CommandResponse handleLsCommand(String sessionId, String[] args) {
+        FormState sessionState = getOrCreateSessionState(sessionId);
+        String currentDir = sessionState.getCurrentDirectory();
+        
+        if ("root".equals(currentDir)) {
+            // List deployment units in root
+            return architectureService.listDeploymentUnits(null);
+        } else if (!currentDir.contains("/")) {
+            // In deployment unit, list folders
+            List<String> folders = Arrays.asList(
+                "dto/        - Data Transfer Objects folder",
+                "transactions/ - Business transactions folder", 
+                "library/     - Library components folder"
+            );
+            
+            CommandResponse response = new CommandResponse(true, "Contents of " + currentDir + ":", 
+                folders, CommandResponse.ResponseType.INFO, null);
+            return response;
+        } else {
+            // In specific folder, list components within that folder
+            String[] pathParts = currentDir.split("/");
+            String duName = pathParts[0];
+            String folder = pathParts[1];
+            
+            return architectureService.listComponentsInFolder(duName, folder);
+        }
+    }
+    
+    private CommandResponse handleExitCommand() {
+        return CommandResponse.success("Goodbye! Session terminated.");
     }
 }

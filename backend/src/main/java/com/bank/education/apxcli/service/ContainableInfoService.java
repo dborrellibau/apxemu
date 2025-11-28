@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 
 /**
@@ -164,5 +165,42 @@ public class ContainableInfoService {
      */
     public Optional<DeploymentUnit> findUnitByName(String name) {
         return repository.findByName(name);
+    }
+    
+    /**
+     * List components within a specific folder of a deployment unit
+     */
+    public CommandResponse listComponentsInFolder(String duName, String folderName) {
+        Optional<DeploymentUnit> duOpt = repository.findByName(duName);
+        if (!duOpt.isPresent()) {
+            return CommandResponse.error("Deployment unit '" + duName + "' not found");
+        }
+        
+        DeploymentUnit du = duOpt.get();
+        Optional<ComponentFolder> folderOpt = du.getComponentFolders().stream()
+            .filter(folder -> folderName.equals(folder.getType().toString().toLowerCase()))
+            .findFirst();
+            
+        if (!folderOpt.isPresent()) {
+            return CommandResponse.info("Folder '" + folderName + "' is empty in " + duName);
+        }
+        
+        ComponentFolder folder = folderOpt.get();
+        if (folder.getContainedUnits().isEmpty()) {
+            return CommandResponse.info("Folder '" + folderName + "' is empty in " + duName);
+        }
+        
+        List<String> componentList = new ArrayList<>();
+        for (DeploymentUnit component : folder.getContainedUnits()) {
+            componentList.add(component.getName() + " (" + component.getType() + ")");
+        }
+            
+        return new CommandResponse(
+            true,
+            "Contents of " + duName + "/" + folderName + ":",
+            componentList,
+            CommandResponse.ResponseType.INFO,
+            null
+        );
     }
 }

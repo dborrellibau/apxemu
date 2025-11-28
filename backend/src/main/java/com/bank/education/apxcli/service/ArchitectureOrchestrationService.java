@@ -200,4 +200,11 @@ public class ArchitectureOrchestrationService {
         // Create the dependency
         return dependencyService.createDependency(sourceName, targetName);
     }
+    
+    /**
+     * Lists components within a specific folder of a deployment unit
+     */
+    public CommandResponse listComponentsInFolder(String duName, String folder) {
+        return infoService.listComponentsInFolder(duName, folder);
+    }
 }
