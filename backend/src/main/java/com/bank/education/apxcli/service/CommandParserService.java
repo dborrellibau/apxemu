@@ -212,19 +212,19 @@ public class CommandParserService {
                 return CommandResponse.error("Already at root directory");
             }
             
-            // If we're in a subfolder, go back to parent
+            // Retroceder un nivel: quitar el último segmento del path
             if (currentDir.contains("/")) {
-                String[] parts = currentDir.split("/");
-                if (parts.length == 2) {
-                    // From du/folder back to root
-                    sessionState.setCurrentDirectory("root");
-                    return CommandResponse.success("Changed directory to /vether");
-                }
-                // If there were more levels, go up one level
-                sessionState.setCurrentDirectory(parts[0]);
-                return CommandResponse.success("Changed directory to /vether/" + parts[0]);
+                // Estamos en un nivel anidado (nivel 2 o 3+)
+                // Ejemplo: "du-online/dto/DTO001" → "du-online/dto"
+                // Ejemplo: "du-online/dto" → "du-online"
+                int lastSlashIndex = currentDir.lastIndexOf("/");
+                String parentDir = currentDir.substring(0, lastSlashIndex);
+                
+                sessionState.setCurrentDirectory(parentDir);
+                return CommandResponse.success("Changed directory to /vether/" + parentDir);
             } else {
-                // From deployment unit back to root
+                // Estamos en un DU (nivel 1), retroceder a root
+                // Ejemplo: "du-online" → "root"
                 sessionState.setCurrentDirectory("root");
                 return CommandResponse.success("Changed directory to /vether");
             }
