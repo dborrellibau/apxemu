@@ -7,6 +7,7 @@ import com.bank.education.apxcli.model.ComponentFolder;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -217,7 +218,61 @@ public class ContainableInfoService {
             return userFolderName.endsWith("IMPL") ? "impl" : "base";
         }
         
-        // For DU-ONLINE: direct mapping
+        // For DU-ONLINE: map user input to enum names
+        // User writes: "dto", "library", "transactions"
+        // Enum names: "DTO", "LIBRARY", "TRANSACTIONS"
+        String lowerFolderName = userFolderName.toLowerCase();
+        if ("dto".equals(lowerFolderName)) {
+            return "dto";
+        } else if ("library".equals(lowerFolderName)) {
+            return "library";
+        } else if ("transactions".equals(lowerFolderName)) {
+            return "transactions";
+        }
+        
         return userFolderName.toLowerCase();
+    }
+    
+    /**
+     * Check if a component exists within a specific folder of a deployment unit
+     */
+    @Transactional(readOnly = true)
+    public boolean componentExistsInFolder(String duName, String folderName, String componentName) {
+        System.out.println("DEBUG: componentExistsInFolder called with duName=" + duName + ", folderName=" + folderName + ", componentName=" + componentName);
+        
+        Optional<DeploymentUnit> duOpt = repository.findByName(duName);
+        System.out.println("DEBUG: DU found: " + duOpt.isPresent());
+        
+        if (!duOpt.isPresent()) {
+            return false;
+        }
+        
+        DeploymentUnit du = duOpt.get();
+        
+        // Map user folder name to internal folder type
+        String internalFolderType = mapUserFolderToInternal(folderName, du);
+        System.out.println("DEBUG: Internal folder type: " + internalFolderType);
+        
+        Optional<ComponentFolder> folderOpt = du.getComponentFolders().stream()
+            .filter(folder -> internalFolderType.equals(folder.getType().toString().toLowerCase()))
+            .findFirst();
+        
+        System.out.println("DEBUG: Target folder found: " + folderOpt.isPresent());
+            
+        if (!folderOpt.isPresent()) {
+            return false;
+        }
+        
+        ComponentFolder folder = folderOpt.get();
+        
+        System.out.println("DEBUG: Number of contained units: " + folder.getContainedUnits().size());
+        folder.getContainedUnits().forEach(unit -> System.out.println("DEBUG: - Unit name: " + unit.getName()));
+        
+        // Check if component with given name exists in this folder
+        boolean exists = folder.getContainedUnits().stream()
+            .anyMatch(component -> componentName.equals(component.getName()));
+        
+        System.out.println("DEBUG: Component exists: " + exists);
+        return exists;
     }
 }

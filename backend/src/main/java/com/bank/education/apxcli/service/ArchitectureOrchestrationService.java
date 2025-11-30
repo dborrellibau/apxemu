@@ -207,4 +207,11 @@ public class ArchitectureOrchestrationService {
     public CommandResponse listComponentsInFolder(String duName, String folder) {
         return infoService.listComponentsInFolder(duName, folder);
     }
+    
+    /**
+     * Check if a component exists within a specific folder
+     */
+    public boolean componentExistsInFolder(String duName, String folder, String componentName) {
+        return infoService.componentExistsInFolder(duName, folder, componentName);
+    }
 }

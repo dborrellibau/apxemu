@@ -276,8 +276,37 @@ public class CommandParserService {
             sessionState.setCurrentDirectory(duName + "/" + target);
             return CommandResponse.success("Changed directory to /vether/" + duName + "/" + target);
         } else {
-            // From folder level, cannot navigate further down
-            return CommandResponse.error("Cannot navigate deeper. Use 'cd ..' to go back or provide a full path.");
+            // Estamos en nivel 2+ (carpeta o componente), intentar navegar más profundo
+            // Ejemplo: desde "delfinita/dto" intentar ir a "UUAAC001"
+            String[] pathParts = currentDir.split("/");
+            
+            if (pathParts.length == 2) {
+                // Estamos en nivel 2 (DU/carpeta), intentar navegar a componente (nivel 3)
+                String duName = pathParts[0];
+                String folderName = pathParts[1];
+                
+                System.out.println("DEBUG CommandParser: Attempting to navigate to component. DU=" + duName + ", Folder=" + folderName + ", Component=" + target);
+                
+                try {
+                    // Validar que el componente existe en esta carpeta específica
+                    boolean exists = architectureService.componentExistsInFolder(duName, folderName, target);
+                    System.out.println("DEBUG CommandParser: componentExistsInFolder returned: " + exists);
+                    
+                    if (exists) {
+                        sessionState.setCurrentDirectory(currentDir + "/" + target);
+                        return CommandResponse.success("Changed directory to /vether/" + currentDir + "/" + target);
+                    } else {
+                        return CommandResponse.error("Component '" + target + "' does not exist in this folder. Use 'ls' to see available components.");
+                    }
+                } catch (Exception e) {
+                    System.out.println("DEBUG CommandParser: Exception caught: " + e.getMessage());
+                    e.printStackTrace();
+                    return CommandResponse.error("Error checking component existence: " + e.getMessage());
+                }
+            } else {
+                // Estamos en nivel 3+ (componente), no podemos ir más profundo
+                return CommandResponse.error("Cannot navigate deeper. Use 'cd ..' to go back.");
+            }
         }
     }
     
