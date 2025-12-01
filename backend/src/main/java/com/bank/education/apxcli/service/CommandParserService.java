@@ -38,6 +38,11 @@ public class CommandParserService {
         // Get or create session state to track directory
         FormState sessionState = getOrCreateSessionState(sessionId);
         
+        // Check if user is waiting for component selection after apx add
+        if (sessionState.isAwaitingComponentSelection()) {
+            return handleComponentSelection(sessionId, originalInput);
+        }
+        
         // Check if user is in an active form session
         FormState activeForm = activeSessions.get(sessionId);
         if (activeForm != null && activeForm.getFormType() != null) {
@@ -314,36 +319,43 @@ public class CommandParserService {
         FormState sessionState = getOrCreateSessionState(sessionId);
         String currentDir = sessionState.getCurrentDirectory();
         
+        // Block apx add in root directory
         if ("root".equals(currentDir)) {
-            return CommandResponse.error("Cannot use 'add' in root directory. Navigate to a folder first using 'cd <du-name>/<folder>'");
+            return CommandResponse.error("Cannot use 'apx add' in root directory. Navigate to a deployment unit first using 'cd <du-name>'");
         }
         
         String[] pathParts = currentDir.split("/");
-        if (pathParts.length != 2) {
-            return CommandResponse.error("Invalid current directory state");
+        
+        // Block apx add in folders (level 2) - only allowed at DU level (level 1)
+        if (pathParts.length > 1) {
+            return CommandResponse.error("Cannot use 'apx add' here. Navigate to the deployment unit level to add components.");
         }
         
         String duName = pathParts[0];
-        String folder = pathParts[1];
         
-        // Map folder to component type
-        String componentType;
-        switch (folder) {
-            case "dto":
-                componentType = "dto";
-                break;
-            case "transactions":
-                componentType = "trx";
-                break;
-            case "lib":
-                componentType = "lib";
-                break;
-            default:
-                return CommandResponse.error("Invalid folder for adding components: " + folder);
+        // Verify the DU exists
+        if (!architectureService.deploymentUnitExists(duName)) {
+            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
         }
         
-        // Start form session for the appropriate component type
-        return startFormSession(sessionId, componentType);
+        // Get DU type to check if it's DU-LIB (not allowed)
+        DeploymentUnit.DeploymentUnitType duType = navigationService.getTypeWithCache(duName);
+        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
+            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
+        }
+        
+        // Set flag to indicate we're awaiting component selection
+        sessionState.setAwaitingComponentSelection(true);
+        
+        // Show menu for component type selection
+        return CommandResponse.menu(
+            "Select component type:",
+            Arrays.asList(
+                "1. DTO (Data Transfer Objects)",
+                "2. Transaction (Business Transaction)",
+                "3. Library (Library Components)"
+            )
+        );
     }
     
     private FormState getOrCreateSessionState(String sessionId) {
@@ -401,6 +413,50 @@ public class CommandParserService {
         return CommandResponse.info(debug.toString());
     }
     
+    private CommandResponse handleComponentSelection(String sessionId, String input) {
+        FormState sessionState = getOrCreateSessionState(sessionId);
+        String currentDir = sessionState.getCurrentDirectory();
+        
+        // Parse selection (1-3 or dto/transaction/library)
+        String componentType = null;
+        String lowerInput = input.toLowerCase().trim();
+        
+        if (lowerInput.matches("^[1-3]$")) {
+            int selection = Integer.parseInt(lowerInput);
+            switch (selection) {
+                case 1: componentType = "dto"; break;
+                case 2: componentType = "trx"; break;
+                case 3: componentType = "lib"; break;
+            }
+        } else if ("dto".equals(lowerInput)) {
+            componentType = "dto";
+        } else if ("transaction".equals(lowerInput)) {
+            componentType = "trx";
+        } else if ("library".equals(lowerInput)) {
+            componentType = "lib";
+        }
+        
+        if (componentType == null) {
+            CommandResponse error = CommandResponse.error("Invalid selection. Enter 1-3 or type name (dto/transaction/library)");
+            error.setPrompt(sessionState.getCurrentPrompt());
+            return error;
+        }
+        
+        // Clear the awaiting flag
+        sessionState.setAwaitingComponentSelection(false);
+        
+        // Get UUAA from DU-ONLINE
+        String duName = currentDir;
+        String duUuaa = architectureService.getDeploymentUnitUuaa(duName);
+        
+        if (duUuaa == null) {
+            return CommandResponse.error("Could not retrieve UUAA from deployment unit: " + duName);
+        }
+        
+        // Start form session with UUAA pre-filled
+        return startFormSessionWithUuaa(sessionId, componentType, duName, duUuaa);
+    }
+    
     private CommandResponse startFormSession(String sessionId, String formType) {
         // Get current directory from existing session state
         FormState existingState = getOrCreateSessionState(sessionId);
@@ -411,6 +467,24 @@ public class CommandParserService {
         
         FormState formState = new FormState(formType);
         formState.setCurrentDirectory(currentDirectory); // Preserve directory
+        activeSessions.put(sessionId, formState);
+        return getNextFormPrompt(formState);
+    }
+    
+    private CommandResponse startFormSessionWithUuaa(String sessionId, String formType, String duName, String uuaa) {
+        // Get current directory from existing session state
+        FormState existingState = getOrCreateSessionState(sessionId);
+        String currentDirectory = existingState.getCurrentDirectory();
+        
+        // Clear any existing form session but preserve directory state
+        activeSessions.remove(sessionId);
+        
+        FormState formState = new FormState(formType);
+        formState.setCurrentDirectory(currentDirectory);
+        formState.addData("uuaa", uuaa); // Pre-fill UUAA
+        formState.addData("duName", duName); // Store DU name for later use
+        formState.nextStep(); // Skip UUAA step
+        
         activeSessions.put(sessionId, formState);
         return getNextFormPrompt(formState);
     }
@@ -621,11 +695,44 @@ public class CommandParserService {
         String currentDir = formState.getCurrentDirectory();
         
         try {
+            // Check if we have a duName stored (from apx add command)
+            String duName = data.get("duName");
+            
+            // If duName is present, create component within that DU
+            if (duName != null) {
+                switch (formType) {
+                    case "dto":
+                        return architectureService.createDtoInFolder(
+                            duName,
+                            data.get("uuaa"), 
+                            data.get("code"), 
+                            data.get("className"), 
+                            data.get("description")
+                        );
+                    case "lib":
+                        return architectureService.createLibInFolder(
+                            duName,
+                            data.get("uuaa"), 
+                            data.get("code"), 
+                            data.get("description")
+                        );
+                    case "trx":
+                        return architectureService.createTrxInFolder(
+                            duName,
+                            data.get("uuaa"), 
+                            data.get("code"), 
+                            data.getOrDefault("version", "01"),
+                            data.getOrDefault("country", "GL"),
+                            data.get("description")
+                        );
+                }
+            }
+            
             // Check if we're in a specific directory and should create object within that DU
             if (!"root".equals(currentDir) && currentDir.contains("/")) {
                 String[] pathParts = currentDir.split("/");
                 if (pathParts.length == 2) {
-                    String duName = pathParts[0];
+                    duName = pathParts[0];
                     String folder = pathParts[1];
                     
                     // Create object within the specific DU folder

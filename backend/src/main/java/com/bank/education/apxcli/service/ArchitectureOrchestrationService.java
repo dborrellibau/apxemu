@@ -214,4 +214,11 @@ public class ArchitectureOrchestrationService {
     public boolean componentExistsInFolder(String duName, String folder, String componentName) {
         return infoService.componentExistsInFolder(duName, folder, componentName);
     }
+    
+    /**
+     * Get UUAA from a deployment unit by name
+     */
+    public String getDeploymentUnitUuaa(String duName) {
+        return queryService.getDeploymentUnitUuaa(duName);
+    }
 }

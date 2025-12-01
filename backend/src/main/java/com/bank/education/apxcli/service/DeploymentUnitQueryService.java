@@ -153,4 +153,13 @@ public class DeploymentUnitQueryService {
             default: return null;
         }
     }
+    
+    /**
+     * Get UUAA from a deployment unit by name
+     */
+    public String getDeploymentUnitUuaa(String duName) {
+        return repository.findByName(duName)
+            .map(DeploymentUnit::getUuaa)
+            .orElse(null);
+    }
 }

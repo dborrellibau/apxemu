@@ -8,10 +8,12 @@ public class FormState {
     private int currentStep;
     private Map<String, String> formData;
     private String currentDirectory; // For navigation: "root" or "<du-name>/<folder>"
+    private boolean awaitingComponentSelection; // Flag for apx add component selection
     
     public FormState() {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
+        this.awaitingComponentSelection = false;
     }
     
     public FormState(String formType) {
@@ -93,5 +95,13 @@ public class FormState {
         } else {
             return "vether/" + currentDirectory + "> ";
         }
+    }
+    
+    public boolean isAwaitingComponentSelection() {
+        return awaitingComponentSelection;
+    }
+    
+    public void setAwaitingComponentSelection(boolean awaitingComponentSelection) {
+        this.awaitingComponentSelection = awaitingComponentSelection;
     }
 }

@@ -286,7 +286,68 @@ public class ContainableCreationService {
     }
     
     public CommandResponse createLibInFolder(String duName, String uuaa, String code, String description) {
-        return createContainable("lib", duName, uuaa, code, null, null, null, description, null);
+        // For libraries in DU-ONLINE folders, create both base and impl
+        return createLibInFolderWithImpl(duName, uuaa, code, description);
+    }
+    
+    /**
+     * Creates a library component with both base and impl versions in the library folder
+     */
+    private CommandResponse createLibInFolderWithImpl(String duName, String uuaa, String code, String description) {
+        Optional<DeploymentUnit> containerOpt = repository.findByName(duName);
+        if (!containerOpt.isPresent()) {
+            return CommandResponse.error("Deployment unit '" + duName + "' not found");
+        }
+        
+        DeploymentUnit container = containerOpt.get();
+        
+        // Find library folder in container
+        Optional<ComponentFolder> folderOpt = container.getComponentFolders().stream()
+            .filter(f -> f.getType() == ComponentFolder.FolderType.LIBRARY)
+            .findFirst();
+            
+        if (!folderOpt.isPresent()) {
+            return CommandResponse.error("No library folder found in " + duName);
+        }
+        
+        ComponentFolder folder = folderOpt.get();
+        
+        // Build library names: UUAAR### (base) and UUAAR###IMPL (impl)
+        String baseName = uuaa + "R" + code;
+        String implName = baseName + "IMPL";
+        
+        // Check if base or impl already exist
+        boolean baseExists = folder.getContainedUnits().stream()
+            .anyMatch(unit -> baseName.equals(unit.getName()));
+        boolean implExists = folder.getContainedUnits().stream()
+            .anyMatch(unit -> implName.equals(unit.getName()));
+            
+        if (baseExists || implExists) {
+            return CommandResponse.error("Library with code '" + code + "' already exists in " + duName + "/library");
+        }
+        
+        // Validate using strategy
+        DeploymentUnitStrategy strategy = DeploymentUnitStrategyFactory.getStrategy(DeploymentUnit.DeploymentUnitType.LIB);
+        CommandResponse validation = strategy.validateCreation(uuaa, code, description, null);
+        if (!validation.isSuccess()) {
+            return validation;
+        }
+        
+        // Create base library
+        DeploymentUnit baseLib = new DeploymentUnit(baseName, DeploymentUnit.DeploymentUnitType.LIB, uuaa, code, null, description);
+        folder.addContainedUnit(baseLib);
+        repository.save(baseLib);
+        
+        // Create impl library
+        DeploymentUnit implLib = new DeploymentUnit(implName, DeploymentUnit.DeploymentUnitType.LIB_IMPL, uuaa, code, null, description);
+        folder.addContainedUnit(implLib);
+        repository.save(implLib);
+        
+        diagramService.notifyDiagramUpdate();
+        
+        return CommandResponse.success(
+            "Created LIB '" + baseName + "' and '" + implName + "' in " + duName + "/library"
+        );
     }
 
     public CommandResponse createTrxInFolder(String duName, String uuaa, String code, String version, String country, String description) {
