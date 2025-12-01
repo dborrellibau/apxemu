@@ -486,7 +486,19 @@ public class CommandParserService {
         formState.nextStep(); // Skip UUAA step
         
         activeSessions.put(sessionId, formState);
-        return getNextFormPrompt(formState);
+        
+        // Get the next form prompt
+        CommandResponse nextPrompt = getNextFormPrompt(formState);
+        
+        // Prepend UUAA information to the response message
+        String uuaaMessage = "UUAA: " + uuaa;
+        if (nextPrompt.getMessage() != null && !nextPrompt.getMessage().isEmpty()) {
+            nextPrompt.setMessage(uuaaMessage + "\n" + nextPrompt.getMessage());
+        } else {
+            nextPrompt.setMessage(uuaaMessage);
+        }
+        
+        return nextPrompt;
     }
     
     private CommandResponse getNextFormPrompt(FormState formState) {
