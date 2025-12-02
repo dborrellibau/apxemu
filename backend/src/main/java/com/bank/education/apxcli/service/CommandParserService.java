@@ -270,9 +270,9 @@ public class CommandParserService {
             "",
             "=== APX Commands ===",
             "apx init                 - Show interactive banking component menu",
-            "apx add                  - Add component in current directory", 
+            "apx add                  - Add component in current directory",
+            "apx add dep              - Create dependency (interactive flow)",
             "apx list [type]          - List deployment units",
-            "apx dep <source> <target> - Create dependency between units",
             "apx show <name>          - Show details of a deployment unit", 
             "apx help                 - Show this help message",
             "",
@@ -284,8 +284,8 @@ public class CommandParserService {
             "",
             "=== APX Examples ===",
             "apx init                 - Start interactive component creation",
+            "apx add dep              - Create dependency (guided workflow)",
             "apx list du-online       - List online deployment units",
-            "apx dep customer-service account-service - Create dependency",
             "apx show customer-service - Show DU details"
         );
         
