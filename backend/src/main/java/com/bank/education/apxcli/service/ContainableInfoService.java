@@ -69,8 +69,7 @@ public class ContainableInfoService {
             "Type: " + unit.getType(),
             "Created: " + unit.getCreatedAt(),
             "Folders: " + unit.getComponentFolders().size(),
-            "Dependencies: " + unit.getDependencies().size(),
-            "Dependents: " + unit.getDependents().size()
+            "Dependencies: " + unit.getDependencies().size()
         );
         
         return new CommandResponse(
@@ -141,8 +140,7 @@ public class ContainableInfoService {
             "Created: " + unit.getCreatedAt(),
             "Folders: " + unit.getComponentFolders().size(),
             "Children: " + unit.getChildDeploymentUnits().size(),
-            "Dependencies: " + unit.getDependencies().size(),
-            "Dependents: " + unit.getDependents().size()
+            "Dependencies: " + unit.getDependencies().size()
         );
         
         return new CommandResponse(

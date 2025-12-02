@@ -156,28 +156,6 @@ public class DependencyManagementService {
     }
     
     /**
-     * Gets all dependents of a deployment unit (units that depend on this one)
-     */
-    public Set<DeploymentUnit> getAllDependents(String unitName) {
-        Optional<DeploymentUnit> unitOpt = repository.findByName(unitName);
-        if (!unitOpt.isPresent()) {
-            return new HashSet<>();
-        }
-        
-        DeploymentUnit unit = unitOpt.get();
-        Set<DeploymentUnit> allDependents = new HashSet<>();
-        
-        // Find all units that have this unit as a dependency
-        for (DeploymentUnit otherUnit : repository.findAll()) {
-            if (otherUnit.getDependencies().contains(unit)) {
-                allDependents.add(otherUnit);
-            }
-        }
-        
-        return allDependents;
-    }
-    
-    /**
      * Validates dependency relationship constraints
      */
     public CommandResponse validateDependency(String sourceName, String targetName) {

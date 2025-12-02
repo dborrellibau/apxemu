@@ -31,6 +31,9 @@ public class ContainableDto {
     // For ComponentFolder specific fields
     private ComponentFolder.FolderType folderType;
     
+    // Dependencies (only for DeploymentUnit)
+    private List<String> dependencyNames;
+    
     // Hierarchical structure
     private List<ContainableDto> children;
     
@@ -54,6 +57,13 @@ public class ContainableDto {
             dto.setUuaa(du.getUuaa());
             dto.setCode(du.getCode());
             dto.setClassName(du.getClassName());
+            
+            // Add dependency names for frontend edge rendering
+            dto.setDependencyNames(
+                du.getDependencies().stream()
+                    .map(DeploymentUnit::getName)
+                    .collect(Collectors.toList())
+            );
             
         } else if (containable instanceof ComponentFolder) {
             ComponentFolder folder = (ComponentFolder) containable;
@@ -109,6 +119,9 @@ public class ContainableDto {
     
     public ComponentFolder.FolderType getFolderType() { return folderType; }
     public void setFolderType(ComponentFolder.FolderType folderType) { this.folderType = folderType; }
+    
+    public List<String> getDependencyNames() { return dependencyNames; }
+    public void setDependencyNames(List<String> dependencyNames) { this.dependencyNames = dependencyNames; }
     
     public List<ContainableDto> getChildren() { return children; }
     public void setChildren(List<ContainableDto> children) { this.children = children; }

@@ -63,9 +63,6 @@ public class DeploymentUnit implements Containable {
     )
     private Set<DeploymentUnit> dependencies = new HashSet<>();
     
-    @ManyToMany(mappedBy = "dependencies")
-    private Set<DeploymentUnit> dependents = new HashSet<>();
-    
     // Constructors
     public DeploymentUnit() {
         this.createdAt = LocalDateTime.now();
@@ -176,23 +173,13 @@ public class DeploymentUnit implements Containable {
         this.dependencies = dependencies;
     }
     
-    public Set<DeploymentUnit> getDependents() {
-        return dependents;
-    }
-    
-    public void setDependents(Set<DeploymentUnit> dependents) {
-        this.dependents = dependents;
-    }
-    
     // Helper methods
     public void addDependency(DeploymentUnit dependency) {
         this.dependencies.add(dependency);
-        dependency.getDependents().add(this);
     }
     
     public void removeDependency(DeploymentUnit dependency) {
         this.dependencies.remove(dependency);
-        dependency.getDependents().remove(this);
     }
     
     // NEW: Getter/Setter for parent DeploymentUnit
