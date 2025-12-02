@@ -1,8 +1,9 @@
-package com.bank.education.apxcli.service;
+package com.bank.education.apxcli.service.dependencies;
 
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
+import com.bank.education.apxcli.service.DiagramService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

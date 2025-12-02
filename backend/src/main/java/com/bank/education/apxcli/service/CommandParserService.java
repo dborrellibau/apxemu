@@ -3,28 +3,55 @@ package com.bank.education.apxcli.service;
 import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.form.FormBuilder;
-import com.bank.education.apxcli.form.FormField;
 import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.service.forms.ComponentSelectionService;
+import com.bank.education.apxcli.service.forms.FormInputService;
+import com.bank.education.apxcli.service.info.InfoCommandService;
+import com.bank.education.apxcli.service.navigation.NavigationCommandService;
+import com.bank.education.apxcli.service.system.SystemCommandService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Main command parser orchestrator - delegates to specialized services
+ * Maintains session state and routes commands to appropriate handlers
+ */
 @Service
 public class CommandParserService {
     
+    private final NavigationCommandService navigationService;
+    private final ComponentSelectionService componentSelectionService;
+    private final FormInputService formInputService;
+    private final InfoCommandService infoCommandService;
+    private final SystemCommandService systemCommandService;
     private final ArchitectureOrchestrationService architectureService;
-    private final DeploymentUnitNavigationService navigationService;
+    private final DeploymentUnitNavigationService directoryNavigationService;
+    
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
-    public CommandParserService(ArchitectureOrchestrationService architectureService,
-                               DeploymentUnitNavigationService navigationService) {
-        this.architectureService = architectureService;
+    public CommandParserService(NavigationCommandService navigationService,
+                               ComponentSelectionService componentSelectionService,
+                               FormInputService formInputService,
+                               InfoCommandService infoCommandService,
+                               SystemCommandService systemCommandService,
+                               ArchitectureOrchestrationService architectureService,
+                               DeploymentUnitNavigationService directoryNavigationService) {
         this.navigationService = navigationService;
+        this.componentSelectionService = componentSelectionService;
+        this.formInputService = formInputService;
+        this.infoCommandService = infoCommandService;
+        this.systemCommandService = systemCommandService;
+        this.architectureService = architectureService;
+        this.directoryNavigationService = directoryNavigationService;
+        
+        // Share activeSessions with form services
+        this.componentSelectionService.setActiveSessions(activeSessions);
+        this.formInputService.setActiveSessions(activeSessions);
+        
         // Clear any residual sessions on startup
         this.activeSessions.clear();
     }
@@ -40,14 +67,14 @@ public class CommandParserService {
         
         // Check if user is waiting for component selection after apx add
         if (sessionState.isAwaitingComponentSelection()) {
-            return handleComponentSelection(sessionId, originalInput);
+            return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
         }
         
         // Check if user is in an active form session
         FormState activeForm = activeSessions.get(sessionId);
         if (activeForm != null && activeForm.getFormType() != null) {
             // User is in a form, treat any input as form data
-            CommandResponse response = handleFormInput(sessionId, originalInput, activeForm);
+            CommandResponse response = formInputService.handleFormInput(sessionId, originalInput, activeForm, sessionState);
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
         }
@@ -72,7 +99,7 @@ public class CommandParserService {
                         return errorResponse;
                 }
             }
-            CommandResponse response = startFormSession(sessionId, formType);
+            CommandResponse response = componentSelectionService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
         }
@@ -81,19 +108,19 @@ public class CommandParserService {
         
         // Standard terminal commands (without apx prefix)
         if ("cd".equals(command)) {
-            response = handleCdCommand(sessionId, args);
+            response = navigationService.handleCdCommand(sessionState, args);
         } else if ("pwd".equals(command)) {
-            response = handlePwdCommand(sessionId);
+            response = navigationService.handlePwdCommand(sessionState);
         } else if ("ls".equals(command)) {
-            response = handleLsCommand(sessionId, args);
+            response = navigationService.handleLsCommand(sessionState, args);
         } else if ("clear".equals(command)) {
-            response = handleClearCommand();
+            response = systemCommandService.handleClearCommand();
         } else if ("exit".equals(command)) {
-            response = handleExitCommand();
+            response = systemCommandService.handleExitCommand();
         } 
         // APX-prefixed commands
         else if ("apx".equals(command)) {
-            response = handleApxCommand(sessionId, args);
+            response = handleApxCommand(sessionId, sessionState, args);
         } 
         // Legacy support - suggest using apx prefix
         else if ("help".equals(command) || "init".equals(command) || "add".equals(command) || 
@@ -109,6 +136,104 @@ public class CommandParserService {
         // Set the current prompt based on session state
         response.setPrompt(sessionState.getCurrentPrompt());
         return response;
+    }
+    
+    private CommandResponse handleApxCommand(String sessionId, FormState sessionState, String[] args) {
+        if (args.length == 0) {
+            return CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
+        }
+        
+        String subCommand = args[0].toLowerCase();
+        String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+        
+        switch (subCommand) {
+            case "help":
+                return showHelp();
+            case "init":
+                return systemCommandService.handleInitCommand(subArgs);
+            case "add":
+                return handleAddCommand(sessionId, sessionState, subArgs);
+            case "list":
+                return infoCommandService.handleListCommand(subArgs);
+            case "dep":
+                return handleDepCommand(subArgs);
+            case "show":
+                return infoCommandService.handleShowCommand(subArgs);
+            case "debug-du":
+                return infoCommandService.handleDebugDuCommand(subArgs);
+            case "reset":
+                return systemCommandService.handleResetSessionCommand(sessionId, activeSessions);
+            case "reset-all":
+                return systemCommandService.handleResetAllSessionsCommand(activeSessions);
+            case "debug":
+                return infoCommandService.handleDebugSessionsCommand(activeSessions);
+            case "test":
+                return CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
+            default:
+                return CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
+        }
+    }
+    
+    private CommandResponse handleAddCommand(String sessionId, FormState sessionState, String[] args) {
+        String currentDir = sessionState.getCurrentDirectory();
+        
+        // Block apx add in root directory
+        if ("root".equals(currentDir)) {
+            return CommandResponse.error("Cannot use 'apx add' in root directory. Navigate to a deployment unit first using 'cd <du-name>'");
+        }
+        
+        String[] pathParts = currentDir.split("/");
+        
+        // Block apx add in folders (level 2) - only allowed at DU level (level 1)
+        if (pathParts.length > 1) {
+            return CommandResponse.error("Cannot use 'apx add' here. Navigate to the deployment unit level to add components.");
+        }
+        
+        String duName = pathParts[0];
+        
+        // Verify the DU exists
+        if (!architectureService.deploymentUnitExists(duName)) {
+            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
+        }
+        
+        // Get DU type to check if it's DU-LIB (not allowed)
+        DeploymentUnit.DeploymentUnitType duType = directoryNavigationService.getTypeWithCache(duName);
+        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
+            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
+        }
+        
+        // Set flag to indicate we're awaiting component selection
+        sessionState.setAwaitingComponentSelection(true);
+        
+        // Show menu for component type selection
+        return CommandResponse.menu(
+            "Select component type:",
+            Arrays.asList(
+                "1. DTO (Data Transfer Objects)",
+                "2. Transaction (Business Transaction)",
+                "3. Library (Library Components)"
+            )
+        );
+    }
+    
+    private CommandResponse handleDepCommand(String[] args) {
+        if (args.length < 2) {
+            return CommandResponse.error("Dep command requires source and target names");
+        }
+        
+        String sourceName = args[0];
+        String targetName = args[1];
+        
+        return architectureService.createDependency(sourceName, targetName);
+    }
+    
+    private FormState getOrCreateSessionState(String sessionId) {
+        FormState state = activeSessions.get(sessionId);
+        if (state == null) {
+            state = new FormState();
+            activeSessions.put(sessionId, state);
+        }
+        return state;
     }
     
     private CommandResponse showHelp() {
@@ -146,834 +271,5 @@ public class CommandParserService {
         );
         
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
-    }
-    
-    private CommandResponse handleInitCommand(String[] args) {
-        // Only allow init without arguments - force interactive menu
-        if (args.length > 0) {
-            return CommandResponse.error("Use 'init' without arguments to access the interactive menu.");
-        }
-        
-        return CommandResponse.menu(
-            "Select banking component type to initialize:",
-            Arrays.asList(
-                "1. du-online  - Deployment Unit Online (main service)",
-                "2. du-lib     - Deployment Unit Library (base + impl)",
-                "3. dto        - Data Transfer Object", 
-                "4. lib        - Library component (creates base + impl)",
-                "5. trx        - Transaction component"
-            )
-        );
-    }
-    
-    private CommandResponse handleListCommand(String[] args) {
-        String type = args.length > 0 ? args[0] : null;
-        return architectureService.listDeploymentUnits(type);
-    }
-    
-    private CommandResponse handleDepCommand(String[] args) {
-        if (args.length < 2) {
-            return CommandResponse.error("Dep command requires source and target names");
-        }
-        
-        String sourceName = args[0];
-        String targetName = args[1];
-        
-        return architectureService.createDependency(sourceName, targetName);
-    }
-    
-    private CommandResponse handleShowCommand(String[] args) {
-        if (args.length < 1) {
-            return CommandResponse.error("Show command requires deployment unit name");
-        }
-        
-        String name = args[0];
-        return architectureService.getDeploymentUnitDetails(name);
-    }
-    
-    private CommandResponse handleClearCommand() {
-        return architectureService.clearAllDeploymentUnits();
-    }
-    
-    private CommandResponse handleCdCommand(String sessionId, String[] args) {
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        String currentDir = sessionState.getCurrentDirectory();
-        
-        if (args.length == 0) {
-            // cd without arguments shows current directory
-            return CommandResponse.success("Current directory: " + 
-                ("root".equals(currentDir) ? "/vether" : "/vether/" + currentDir));
-        }
-        
-        if (args.length != 1) {
-            return CommandResponse.error("Usage: cd <directory>, cd .. (go back), or cd (show current directory)");
-        }
-        
-        String target = args[0];
-        
-        // Handle cd .. (go back)
-        if ("..".equals(target)) {
-            if ("root".equals(currentDir)) {
-                return CommandResponse.error("Already at root directory");
-            }
-            
-            // Retroceder un nivel: quitar el último segmento del path
-            if (currentDir.contains("/")) {
-                // Estamos en un nivel anidado (nivel 2 o 3+)
-                // Ejemplo: "du-online/dto/DTO001" → "du-online/dto"
-                // Ejemplo: "du-online/dto" → "du-online"
-                int lastSlashIndex = currentDir.lastIndexOf("/");
-                String parentDir = currentDir.substring(0, lastSlashIndex);
-                
-                sessionState.setCurrentDirectory(parentDir);
-                return CommandResponse.success("Changed directory to /vether/" + parentDir);
-            } else {
-                // Estamos en un DU (nivel 1), retroceder a root
-                // Ejemplo: "du-online" → "root"
-                sessionState.setCurrentDirectory("root");
-                return CommandResponse.success("Changed directory to /vether");
-            }
-        }
-        
-        // Handle absolute path navigation (du-name/folder)
-        if (target.contains("/")) {
-            String[] pathParts = target.split("/");
-            
-            if (pathParts.length != 2) {
-                return CommandResponse.error("Invalid path format. Use: <du-name>/<folder>");
-            }
-            
-            String duName = pathParts[0];
-            String folder = pathParts[1];
-            
-            // Validate that the DU exists
-            if (!architectureService.containableExists(duName, null)) {
-                return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-            }
-            
-            // Validate folder name using navigation service
-            if (!navigationService.isValidFolder(duName, folder)) {
-                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
-            }
-            
-            sessionState.setCurrentDirectory(duName + "/" + folder);
-            return CommandResponse.success("Changed directory to /vether/" + target);
-        }
-        
-        // Handle single directory navigation
-        if ("root".equals(currentDir)) {
-            // From root, can only navigate to existing deployment units
-            if (!architectureService.containableExists(target, null)) {
-                return CommandResponse.error("Deployment unit '" + target + "' does not exist. Use 'apx list' to see available deployment units.");
-            }
-            
-            sessionState.setCurrentDirectory(target);
-            return CommandResponse.success("Changed directory to /vether/" + target);
-        } else if (!currentDir.contains("/")) {
-            // From deployment unit, can navigate to folders
-            String duName = currentDir;
-            
-            // Validate folder name using navigation service
-            if (!navigationService.isValidFolder(duName, target)) {
-                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
-            }
-            
-            sessionState.setCurrentDirectory(duName + "/" + target);
-            return CommandResponse.success("Changed directory to /vether/" + duName + "/" + target);
-        } else {
-            // Estamos en nivel 2+ (carpeta o componente), intentar navegar más profundo
-            // Ejemplo: desde "delfinita/dto" intentar ir a "UUAAC001"
-            String[] pathParts = currentDir.split("/");
-            
-            if (pathParts.length == 2) {
-                // Estamos en nivel 2 (DU/carpeta), intentar navegar a componente (nivel 3)
-                String duName = pathParts[0];
-                String folderName = pathParts[1];
-                
-                System.out.println("DEBUG CommandParser: Attempting to navigate to component. DU=" + duName + ", Folder=" + folderName + ", Component=" + target);
-                
-                try {
-                    // Validar que el componente existe en esta carpeta específica
-                    boolean exists = architectureService.componentExistsInFolder(duName, folderName, target);
-                    System.out.println("DEBUG CommandParser: componentExistsInFolder returned: " + exists);
-                    
-                    if (exists) {
-                        sessionState.setCurrentDirectory(currentDir + "/" + target);
-                        return CommandResponse.success("Changed directory to /vether/" + currentDir + "/" + target);
-                    } else {
-                        return CommandResponse.error("Component '" + target + "' does not exist in this folder. Use 'ls' to see available components.");
-                    }
-                } catch (Exception e) {
-                    System.out.println("DEBUG CommandParser: Exception caught: " + e.getMessage());
-                    e.printStackTrace();
-                    return CommandResponse.error("Error checking component existence: " + e.getMessage());
-                }
-            } else {
-                // Estamos en nivel 3+ (componente), no podemos ir más profundo
-                return CommandResponse.error("Cannot navigate deeper. Use 'cd ..' to go back.");
-            }
-        }
-    }
-    
-    private CommandResponse handleAddCommand(String sessionId, String[] args) {
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        String currentDir = sessionState.getCurrentDirectory();
-        
-        // Block apx add in root directory
-        if ("root".equals(currentDir)) {
-            return CommandResponse.error("Cannot use 'apx add' in root directory. Navigate to a deployment unit first using 'cd <du-name>'");
-        }
-        
-        String[] pathParts = currentDir.split("/");
-        
-        // Block apx add in folders (level 2) - only allowed at DU level (level 1)
-        if (pathParts.length > 1) {
-            return CommandResponse.error("Cannot use 'apx add' here. Navigate to the deployment unit level to add components.");
-        }
-        
-        String duName = pathParts[0];
-        
-        // Verify the DU exists
-        if (!architectureService.deploymentUnitExists(duName)) {
-            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-        }
-        
-        // Get DU type to check if it's DU-LIB (not allowed)
-        DeploymentUnit.DeploymentUnitType duType = navigationService.getTypeWithCache(duName);
-        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
-        }
-        
-        // Set flag to indicate we're awaiting component selection
-        sessionState.setAwaitingComponentSelection(true);
-        
-        // Show menu for component type selection
-        return CommandResponse.menu(
-            "Select component type:",
-            Arrays.asList(
-                "1. DTO (Data Transfer Objects)",
-                "2. Transaction (Business Transaction)",
-                "3. Library (Library Components)"
-            )
-        );
-    }
-    
-    private FormState getOrCreateSessionState(String sessionId) {
-        FormState state = activeSessions.get(sessionId);
-        if (state == null) {
-            state = new FormState();
-            activeSessions.put(sessionId, state);
-        }
-        return state;
-    }
-    
-    private CommandResponse handleDebugDuCommand(String[] args) {
-        if (args.length == 0) {
-            return CommandResponse.error("Usage: debug-du <du-name>");
-        }
-        
-        String duName = args[0];
-        return architectureService.debugDeploymentUnit(duName);
-    }
-    
-    private CommandResponse handlePwdCommand(String sessionId) {
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        String currentDir = sessionState.getCurrentDirectory();
-        String displayPath = "root".equals(currentDir) ? "/vether" : "/vether/" + currentDir;
-        return CommandResponse.success(displayPath);
-    }
-    
-    private CommandResponse handleResetSessionCommand(String sessionId) {
-        activeSessions.remove(sessionId);
-        return CommandResponse.success("Session reset. You can now start new forms.");
-    }
-    
-    private CommandResponse handleResetAllSessionsCommand() {
-        int cleared = activeSessions.size();
-        activeSessions.clear();
-        return CommandResponse.success("Cleared " + cleared + " sessions. System fully reset.");
-    }
-    
-    private CommandResponse handleDebugSessionsCommand() {
-        StringBuilder debug = new StringBuilder("Session Debug Info:\n");
-        debug.append("Total active sessions: ").append(activeSessions.size()).append("\n");
-        
-        if (activeSessions.isEmpty()) {
-            debug.append("No active sessions - system ready for new commands.");
-        } else {
-            for (Map.Entry<String, FormState> entry : activeSessions.entrySet()) {
-                FormState state = entry.getValue();
-                debug.append("Session ").append(entry.getKey())
-                     .append(": type=").append(state.getFormType())
-                     .append(", step=").append(state.getCurrentStep())
-                     .append(", complete=").append(state.isComplete()).append("\n");
-            }
-        }
-        
-        return CommandResponse.info(debug.toString());
-    }
-    
-    private CommandResponse handleComponentSelection(String sessionId, String input) {
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        String currentDir = sessionState.getCurrentDirectory();
-        
-        // Parse selection (1-3 or dto/transaction/library)
-        String componentType = null;
-        String lowerInput = input.toLowerCase().trim();
-        
-        if (lowerInput.matches("^[1-3]$")) {
-            int selection = Integer.parseInt(lowerInput);
-            switch (selection) {
-                case 1: componentType = "dto"; break;
-                case 2: componentType = "trx"; break;
-                case 3: componentType = "lib"; break;
-            }
-        } else if ("dto".equals(lowerInput)) {
-            componentType = "dto";
-        } else if ("transaction".equals(lowerInput)) {
-            componentType = "trx";
-        } else if ("library".equals(lowerInput)) {
-            componentType = "lib";
-        }
-        
-        if (componentType == null) {
-            CommandResponse error = CommandResponse.error("Invalid selection. Enter 1-3 or type name (dto/transaction/library)");
-            error.setPrompt(sessionState.getCurrentPrompt());
-            return error;
-        }
-        
-        // Clear the awaiting flag
-        sessionState.setAwaitingComponentSelection(false);
-        
-        // Get UUAA from DU-ONLINE
-        String duName = currentDir;
-        String duUuaa = architectureService.getDeploymentUnitUuaa(duName);
-        
-        if (duUuaa == null) {
-            return CommandResponse.error("Could not retrieve UUAA from deployment unit: " + duName);
-        }
-        
-        // Start form session with UUAA pre-filled
-        return startFormSessionWithUuaa(sessionId, componentType, duName, duUuaa);
-    }
-    
-    private CommandResponse startFormSession(String sessionId, String formType) {
-        // Get current directory from existing session state
-        FormState existingState = getOrCreateSessionState(sessionId);
-        String currentDirectory = existingState.getCurrentDirectory();
-        
-        // Clear any existing form session but preserve directory state
-        activeSessions.remove(sessionId);
-        
-        FormState formState = new FormState(formType);
-        formState.setCurrentDirectory(currentDirectory); // Preserve directory
-        activeSessions.put(sessionId, formState);
-        return getNextFormPrompt(formState);
-    }
-    
-    private CommandResponse startFormSessionWithUuaa(String sessionId, String formType, String duName, String uuaa) {
-        // Get current directory from existing session state
-        FormState existingState = getOrCreateSessionState(sessionId);
-        String currentDirectory = existingState.getCurrentDirectory();
-        
-        // Clear any existing form session but preserve directory state
-        activeSessions.remove(sessionId);
-        
-        FormState formState = new FormState(formType);
-        formState.setCurrentDirectory(currentDirectory);
-        formState.addData("uuaa", uuaa); // Pre-fill UUAA
-        formState.addData("duName", duName); // Store DU name for later use
-        formState.nextStep(); // Skip UUAA step
-        
-        activeSessions.put(sessionId, formState);
-        
-        // Get the next form prompt
-        CommandResponse nextPrompt = getNextFormPrompt(formState);
-        
-        // Prepend UUAA information to the response message
-        String uuaaMessage = "UUAA: " + uuaa;
-        if (nextPrompt.getMessage() != null && !nextPrompt.getMessage().isEmpty()) {
-            nextPrompt.setMessage(uuaaMessage + "\n" + nextPrompt.getMessage());
-        } else {
-            nextPrompt.setMessage(uuaaMessage);
-        }
-        
-        return nextPrompt;
-    }
-    
-    private CommandResponse getNextFormPrompt(FormState formState) {
-        String formType = formState.getFormType();
-        int step = formState.getCurrentStep();
-        
-        switch (formType) {
-            case "dto":
-                return getDtoFormPrompt(step);
-            case "lib":
-                return getLibFormPrompt(step);
-            case "trx":
-                return getTrxFormPrompt(step);
-            case "du-online":
-                return getDuOnlineFormPrompt(step);
-            case "du-lib":
-                return getDuLibFormPrompt(step);
-            default:
-                return CommandResponse.error("Unknown form type: " + formType);
-        }
-    }
-    
-    private CommandResponse getDtoFormPrompt(int step) {
-        List<FormField> formFields = FormBuilder.createDtoForm();
-        
-        if (step >= 0 && step < formFields.size()) {
-            FormField field = formFields.get(step);
-            return CommandResponse.form(field.getPrompt(), field.getName());
-        }
-        return CommandResponse.error("Invalid DTO form step");
-    }
-    
-    private CommandResponse getLibFormPrompt(int step) {
-        List<FormField> formFields = FormBuilder.createLibForm();
-        
-        if (step >= 0 && step < formFields.size()) {
-            FormField field = formFields.get(step);
-            return CommandResponse.form(field.getPrompt(), field.getName());
-        }
-        return CommandResponse.error("Invalid LIB form step");
-    }
-    
-    private CommandResponse getTrxFormPrompt(int step) {
-        List<FormField> formFields = FormBuilder.createTrxForm();
-        
-        if (step >= 0 && step < formFields.size()) {
-            FormField field = formFields.get(step);
-            return CommandResponse.form(field.getPrompt(), field.getName());
-        }
-        return CommandResponse.error("Invalid TRX form step");
-    }
-    
-    private CommandResponse getDuOnlineFormPrompt(int step) {
-        List<FormField> formFields = FormBuilder.createDuOnlineForm();
-        
-        if (step >= 0 && step < formFields.size()) {
-            FormField field = formFields.get(step);
-            return CommandResponse.form(field.getPrompt(), field.getName());
-        }
-        return CommandResponse.error("Invalid DU-ONLINE form step");
-    }
-    
-    private CommandResponse getDuLibFormPrompt(int step) {
-        List<FormField> formFields = FormBuilder.createDuLibForm();
-        
-        if (step >= 0 && step < formFields.size()) {
-            FormField field = formFields.get(step);
-            return CommandResponse.form(field.getPrompt(), field.getName());
-        }
-        return CommandResponse.error("Invalid DU-LIB form step");
-    }
-    
-    private CommandResponse handleFormInput(String sessionId, String input, FormState formState) {
-        String formType = formState.getFormType();
-        int step = formState.getCurrentStep();
-        
-        // Validate input based on current step and form type
-        CommandResponse validation = validateFormInput(formState, step, input);
-        if (!validation.isSuccess()) {
-            // Return error but keep the same form step
-            FormState sessionState = getOrCreateSessionState(sessionId);
-            validation.setPrompt(sessionState.getCurrentPrompt());
-            return validation;
-        }
-        
-        // Store the input
-        String fieldName = getFieldNameForStep(formType, step);
-        formState.addData(fieldName, input.trim());
-        formState.nextStep();
-        
-        // Check if form is complete
-        if (formState.isComplete()) {
-            // Save current directory before clearing session
-            String currentDirectory = formState.getCurrentDirectory();
-            
-            // Clear session BEFORE processing to avoid any interference
-            activeSessions.remove(sessionId);
-            CommandResponse result = processCompleteForm(sessionId, formState);
-            
-            // Restore directory state after processing
-            FormState sessionState = getOrCreateSessionState(sessionId);
-            sessionState.setCurrentDirectory(currentDirectory);
-            result.setPrompt(sessionState.getCurrentPrompt());
-            return result;
-        }
-        
-        // Get next prompt
-        CommandResponse nextPrompt = getNextFormPrompt(formState);
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        nextPrompt.setPrompt(sessionState.getCurrentPrompt());
-        return nextPrompt;
-    }
-    
-    private String getFieldNameForStep(String formType, int step) {
-        List<FormField> formFields = getFormFields(formType);
-        if (step >= 0 && step < formFields.size()) {
-            return formFields.get(step).getName();
-        }
-        return "unknown";
-    }
-    
-    private List<FormField> getFormFields(String formType) {
-        switch (formType) {
-            case "dto": return FormBuilder.createDtoForm();
-            case "lib": return FormBuilder.createLibForm();
-            case "trx": return FormBuilder.createTrxForm();
-            case "du-online": return FormBuilder.createDuOnlineForm();
-            case "du-lib": return FormBuilder.createDuLibForm();
-            default: return Arrays.asList();
-        }
-    }
-    
-    private CommandResponse validateFormInput(FormState formState, int step, String input) {
-        String formType = formState.getFormType();
-        List<FormField> formFields = getFormFields(formType);
-        
-        if (step >= formFields.size()) {
-            return CommandResponse.error("Invalid form step");
-        }
-        
-        FormField field = formFields.get(step);
-        
-        // Basic validation using field type
-        if (input == null || input.trim().isEmpty()) {
-            if (field.isRequired()) {
-                return CommandResponse.error("Input cannot be empty. Try again:");
-            }
-            return CommandResponse.success("Valid input");
-        }
-        
-        String trimmed = input.trim();
-        
-        switch (field.getType()) {
-            case UUAA:
-                if (!trimmed.matches("^[A-Z]{4}$")) {
-                    return CommandResponse.error("UUAA must be exactly 4 uppercase letters. Try again:");
-                }
-                break;
-            case CODE:
-                if (!trimmed.matches("^\\d{3}$")) {
-                    return CommandResponse.error("Code must be exactly 3 digits (001-999). Try again:");
-                }
-                // Check for unique code by type
-                if (architectureService.containableExists(trimmed, formType)) {
-                    return CommandResponse.error("Code " + trimmed + " already exists for " + formType.toUpperCase() + ". Try again:");
-                }
-                break;
-            case VERSION:
-                if (!trimmed.matches("^\\d{2}$")) {
-                    return CommandResponse.error("Version must be exactly 2 digits (01-99). Try again:");
-                }
-                int version = Integer.parseInt(trimmed);
-                if (version < 1 || version > 99) {
-                    return CommandResponse.error("Version must be between 01 and 99. Try again:");
-                }
-                break;
-            case COUNTRY_SELECT:
-                String upperInput = trimmed.toUpperCase();
-                if (!field.getOptions().contains(upperInput)) {
-                    return CommandResponse.error("Invalid country. Valid options: " + String.join(", ", field.getOptions()) + ". Try again:");
-                }
-                break;
-            case CLASS_NAME:
-                if (!trimmed.matches("^[A-Za-z][A-Za-z0-9_]*$")) {
-                    return CommandResponse.error("Class name must start with a letter and contain only letters, numbers, and underscores. Try again:");
-                }
-                break;
-            case DEPLOYMENT_UNIT:
-                if (trimmed.contains(" ")) {
-                    return CommandResponse.error("Deployment Unit name cannot contain spaces. Try again:");
-                }
-                break;
-            case DESCRIPTION:
-                if (trimmed.length() < 5) {
-                    return CommandResponse.error("Description must be at least 5 characters long. Try again:");
-                }
-                break;
-        }
-        
-        return CommandResponse.success("Valid input");
-    }
-    
-    private CommandResponse processCompleteForm(String sessionId, FormState formState) {
-        String formType = formState.getFormType();
-        Map<String, String> data = formState.getFormData();
-        String currentDir = formState.getCurrentDirectory();
-        
-        try {
-            // Check if we have a duName stored (from apx add command)
-            String duName = data.get("duName");
-            
-            // If duName is present, create component within that DU
-            if (duName != null) {
-                switch (formType) {
-                    case "dto":
-                        return architectureService.createDtoInFolder(
-                            duName,
-                            data.get("uuaa"), 
-                            data.get("code"), 
-                            data.get("className"), 
-                            data.get("description")
-                        );
-                    case "lib":
-                        return architectureService.createLibInFolder(
-                            duName,
-                            data.get("uuaa"), 
-                            data.get("code"), 
-                            data.get("description")
-                        );
-                    case "trx":
-                        return architectureService.createTrxInFolder(
-                            duName,
-                            data.get("uuaa"), 
-                            data.get("code"), 
-                            data.getOrDefault("version", "01"),
-                            data.getOrDefault("country", "GL"),
-                            data.get("description")
-                        );
-                }
-            }
-            
-            // Check if we're in a specific directory and should create object within that DU
-            if (!"root".equals(currentDir) && currentDir.contains("/")) {
-                String[] pathParts = currentDir.split("/");
-                if (pathParts.length == 2) {
-                    duName = pathParts[0];
-                    String folder = pathParts[1];
-                    
-                    // Create object within the specific DU folder
-                    switch (formType) {
-                        case "dto":
-                            return architectureService.createDtoInFolder(
-                                duName,
-                                data.get("uuaa"), 
-                                data.get("code"), 
-                                data.get("className"), 
-                                data.get("description")
-                            );
-                        case "lib":
-                            return architectureService.createLibInFolder(
-                                duName,
-                                data.get("uuaa"), 
-                                data.get("code"), 
-                                data.get("description")
-                            );
-                        case "trx":
-                            return architectureService.createTrxInFolder(
-                                duName,
-                                data.get("uuaa"), 
-                                data.get("code"), 
-                                data.getOrDefault("version", "01"),
-                                data.getOrDefault("country", "GL"),
-                                data.get("description")
-                            );
-                    }
-                }
-            }
-            
-            // Default behavior - create standalone objects (when in root)
-            switch (formType) {
-                case "dto":
-                    return architectureService.createDto(
-                        data.get("uuaa"), 
-                        data.get("code"), 
-                        data.get("className"), 
-                        data.get("description")
-                    );
-                case "lib":
-                    return architectureService.createLib(
-                        data.get("uuaa"), 
-                        data.get("code"), 
-                        data.get("description")
-                    );
-                case "trx":
-                    return architectureService.createTrx(
-                        data.get("uuaa"), 
-                        data.get("code"), 
-                        data.getOrDefault("version", "01"),
-                        data.getOrDefault("country", "GL"),
-                        data.get("description")
-                    );
-                case "du-online":
-                    return architectureService.createDuOnline(
-                        data.get("uuaa"), 
-                        data.get("deploymentUnit"), 
-                        data.get("description")
-                    );
-                case "du-lib":
-                    return architectureService.createDuLib(
-                        data.get("uuaa"), 
-                        data.get("code"), 
-                        data.get("description")
-                    );
-                default:
-                    return CommandResponse.error("Unknown form type: " + formType);
-            }
-        } catch (Exception e) {
-            return CommandResponse.error("Error creating " + formType + ": " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Universal method to create objects from form data
-     * Simplifies the creation logic by routing to appropriate ArchitectureService methods
-     */
-    private CommandResponse createObjectFromFormData(String formType, Map<String, String> data, String currentDir) {
-        try {
-            // Check if we're in a specific directory and should create object within that DU
-            if (!"root".equals(currentDir) && currentDir.contains("/")) {
-                String[] pathParts = currentDir.split("/");
-                if (pathParts.length == 2) {
-                    String duName = pathParts[0];
-                    
-                    // Create object within the specific DU folder
-                    switch (formType) {
-                        case "dto":
-                            return architectureService.createDtoInFolder(
-                                duName, data.get("uuaa"), data.get("code"), 
-                                data.get("className"), data.get("description")
-                            );
-                        case "lib":
-                            return architectureService.createLibInFolder(
-                                duName, data.get("uuaa"), data.get("code"), data.get("description")
-                            );
-                        case "trx":
-                            return architectureService.createTrxInFolder(
-                                duName, data.get("uuaa"), data.get("code"), 
-                                data.getOrDefault("version", "01"), data.getOrDefault("country", "GL"),
-                                data.get("description")
-                            );
-                        default:
-                            return CommandResponse.error("Cannot create " + formType + " inside a deployment unit.");
-                    }
-                }
-            }
-            
-            // Default behavior - create standalone objects using simplified ArchitectureService methods
-            switch (formType) {
-                case "dto":
-                    return architectureService.createDto(
-                        data.get("uuaa"), data.get("code"), 
-                        data.get("className"), data.get("description")
-                    );
-                case "lib":
-                    return architectureService.createLib(
-                        data.get("uuaa"), data.get("code"), data.get("description")
-                    );
-                case "trx":
-                    return architectureService.createTrx(
-                        data.get("uuaa"), data.get("code"), 
-                        data.getOrDefault("version", "01"), data.getOrDefault("country", "GL"),
-                        data.get("description")
-                    );
-                case "du-online":
-                    return architectureService.createDuOnline(
-                        data.get("uuaa"), data.get("deploymentUnit"), data.get("description")
-                    );
-                case "du-lib":
-                    return architectureService.createDuLib(
-                        data.get("uuaa"), data.get("code"), data.get("description")
-                    );
-                default:
-                    return CommandResponse.error("Unknown form type: " + formType);
-            }
-        } catch (Exception e) {
-            return CommandResponse.error("Error creating " + formType + ": " + e.getMessage());
-        }
-    }
-    
-    private CommandResponse handleApxCommand(String sessionId, String[] args) {
-        if (args.length == 0) {
-            return CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
-        }
-        
-        String subCommand = args[0].toLowerCase();
-        String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
-        
-        switch (subCommand) {
-            case "help":
-                return showHelp();
-            case "init":
-                return handleInitCommand(subArgs);
-            case "add":
-                return handleAddCommand(sessionId, subArgs);
-            case "list":
-                return handleListCommand(subArgs);
-            case "dep":
-                return handleDepCommand(subArgs);
-            case "show":
-                return handleShowCommand(subArgs);
-            case "debug-du":
-                return handleDebugDuCommand(subArgs);
-            case "reset":
-                return handleResetSessionCommand(sessionId);
-            case "reset-all":
-                return handleResetAllSessionsCommand();
-            case "debug":
-                return handleDebugSessionsCommand();
-            case "test":
-                return CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
-            default:
-                return CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
-        }
-    }
-    
-    private CommandResponse handleLsCommand(String sessionId, String[] args) {
-        FormState sessionState = getOrCreateSessionState(sessionId);
-        String currentDir = sessionState.getCurrentDirectory();
-        
-        if ("root".equals(currentDir)) {
-            // List deployment units in root
-            return architectureService.listDeploymentUnits(null);
-        } else if (!currentDir.contains("/")) {
-            // In deployment unit, list folders specific to DU type
-            List<String> folders = navigationService.getValidFolders(currentDir);
-            List<String> formattedFolders = new ArrayList<>();
-            
-            for (String folder : folders) {
-                formattedFolders.add(folder + "/        - " + getFolderDescription(currentDir, folder));
-            }
-            
-            CommandResponse response = new CommandResponse(true, "Contents of " + currentDir + ":", 
-                formattedFolders, CommandResponse.ResponseType.INFO, null);
-            return response;
-        } else {
-            // In specific folder, list components within that folder
-            String[] pathParts = currentDir.split("/");
-            String duName = pathParts[0];
-            String folder = pathParts[1];
-            
-            return architectureService.listComponentsInFolder(duName, folder);
-        }
-    }
-    
-    private String getFolderDescription(String duName, String folderName) {
-        DeploymentUnit.DeploymentUnitType duType = navigationService.getTypeWithCache(duName);
-        
-        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            if (folderName.endsWith("IMPL")) {
-                return "Implementation library components";
-            } else {
-                return "Base library components";
-            }
-        } else {
-            // DU_ONLINE descriptions
-            switch (folderName.toLowerCase()) {
-                case "dto": return "Data Transfer Objects folder";
-                case "transactions": return "Business transactions folder";
-                case "library": return "Library components folder";
-                default: return "Component folder";
-            }
-        }
-    }
-    
-    private CommandResponse handleExitCommand() {
-        return CommandResponse.success("Goodbye! Session terminated.");
     }
 }
