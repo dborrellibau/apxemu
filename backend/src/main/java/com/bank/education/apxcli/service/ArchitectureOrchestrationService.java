@@ -222,4 +222,12 @@ public class ArchitectureOrchestrationService {
     public String getDeploymentUnitUuaa(String duName) {
         return queryService.getDeploymentUnitUuaa(duName);
     }
+
+    /**
+     * Lists all components across all folders in a deployment unit
+     * Used for dependency flow when selecting source component
+     */
+    public List<String> listAllComponentsInDU(String duName) {
+        return infoService.listAllComponentsInDU(duName);
+    }
 }

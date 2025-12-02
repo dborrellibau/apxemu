@@ -273,4 +273,31 @@ public class ContainableInfoService {
         System.out.println("DEBUG: Component exists: " + exists);
         return exists;
     }
+
+    /**
+     * Lists all components across all folders in a deployment unit
+     * Used for dependency flow when selecting source component from level 1 or 2
+     * 
+     * @param duName The deployment unit name
+     * @return List of component names across all folders (dto, lib, trx)
+     */
+    public List<String> listAllComponentsInDU(String duName) {
+        List<String> allComponents = new ArrayList<>();
+        
+        Optional<DeploymentUnit> duOpt = repository.findByName(duName);
+        if (!duOpt.isPresent()) {
+            return allComponents; // Empty list if DU not found
+        }
+        
+        DeploymentUnit du = duOpt.get();
+        
+        // Iterate through all folders (dto, lib, trx)
+        for (ComponentFolder folder : du.getComponentFolders()) {
+            for (DeploymentUnit component : folder.getContainedUnits()) {
+                allComponents.add(component.getName());
+            }
+        }
+        
+        return allComponents;
+    }
 }
