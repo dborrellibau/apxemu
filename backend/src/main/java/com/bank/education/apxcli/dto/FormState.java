@@ -10,10 +10,18 @@ public class FormState {
     private String currentDirectory; // For navigation: "root" or "<du-name>/<folder>"
     private boolean awaitingComponentSelection; // Flag for apx add component selection
     
+    // Dependency flow flags
+    private boolean awaitingDependencySourceSelection; // Flag for selecting source component (levels 1-2)
+    private boolean awaitingDependencyTypeSelection;   // Flag for selecting dependency type
+    private boolean awaitingDependencyArtifactId;      // Flag for entering artifact ID
+    
     public FormState() {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
         this.awaitingComponentSelection = false;
+        this.awaitingDependencySourceSelection = false;
+        this.awaitingDependencyTypeSelection = false;
+        this.awaitingDependencyArtifactId = false;
     }
     
     public FormState(String formType) {
@@ -103,5 +111,49 @@ public class FormState {
     
     public void setAwaitingComponentSelection(boolean awaitingComponentSelection) {
         this.awaitingComponentSelection = awaitingComponentSelection;
+    }
+    
+    // Dependency flow getters and setters
+    public boolean isAwaitingDependencySourceSelection() {
+        return awaitingDependencySourceSelection;
+    }
+    
+    public void setAwaitingDependencySourceSelection(boolean awaitingDependencySourceSelection) {
+        this.awaitingDependencySourceSelection = awaitingDependencySourceSelection;
+    }
+    
+    public boolean isAwaitingDependencyTypeSelection() {
+        return awaitingDependencyTypeSelection;
+    }
+    
+    public void setAwaitingDependencyTypeSelection(boolean awaitingDependencyTypeSelection) {
+        this.awaitingDependencyTypeSelection = awaitingDependencyTypeSelection;
+    }
+    
+    public boolean isAwaitingDependencyArtifactId() {
+        return awaitingDependencyArtifactId;
+    }
+    
+    public void setAwaitingDependencyArtifactId(boolean awaitingDependencyArtifactId) {
+        this.awaitingDependencyArtifactId = awaitingDependencyArtifactId;
+    }
+    
+    /**
+     * Clears all dependency flow flags and temporary data
+     */
+    public void clearDependencyFlowData() {
+        this.awaitingDependencySourceSelection = false;
+        this.awaitingDependencyTypeSelection = false;
+        this.awaitingDependencyArtifactId = false;
+        clearPendingDepData();
+    }
+    
+    /**
+     * Clears temporary dependency data from formData map
+     */
+    public void clearPendingDepData() {
+        this.formData.remove("depSourceComponent");
+        this.formData.remove("depSourceType");
+        this.formData.remove("depTargetType");
     }
 }
