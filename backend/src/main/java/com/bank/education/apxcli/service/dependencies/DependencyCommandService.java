@@ -73,16 +73,69 @@ public class DependencyCommandService {
      * User must select which component will be the source of the dependency
      */
     public CommandResponse showSourceComponentSelection(FormState sessionState, String duName) {
-        // TODO: Implement in ETAPA 5
-        return CommandResponse.error("Component selection not yet implemented (ETAPA 5)");
+        // Get all components in this DU
+        List<String> components = architectureService.listAllComponentsInDU(duName);
+        
+        if (components.isEmpty()) {
+            return CommandResponse.error("No components found in deployment unit '" + duName + "'");
+        }
+        
+        // Build menu message
+        StringBuilder menu = new StringBuilder();
+        menu.append("Select source component for dependency:\n");
+        for (int i = 0; i < components.size(); i++) {
+            menu.append((i + 1)).append(". ").append(components.get(i)).append("\n");
+        }
+        menu.append("\nEnter component number or name:");
+        
+        // Set flag and store DU name
+        sessionState.setAwaitingDependencySourceSelection(true);
+        sessionState.addData("depSourceDU", duName);
+        
+        return CommandResponse.info(menu.toString());
     }
     
     /**
      * Handles user input when selecting source component (levels 1-2)
      */
     public CommandResponse handleSourceComponentInput(FormState sessionState, String input) {
-        // TODO: Implement in ETAPA 5
-        return CommandResponse.error("Component selection handler not yet implemented (ETAPA 5)");
+        String duName = sessionState.getData("depSourceDU");
+        if (duName == null) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("Session error: deployment unit not found. Please try again.");
+        }
+        
+        // Get components list again
+        List<String> components = architectureService.listAllComponentsInDU(duName);
+        
+        String selectedComponent = null;
+        
+        // Check if input is a number (menu selection)
+        if (input.matches("^\\d+$")) {
+            int selection = Integer.parseInt(input);
+            if (selection < 1 || selection > components.size()) {
+                return CommandResponse.error("Invalid selection. Please enter a number between 1 and " + components.size());
+            }
+            selectedComponent = components.get(selection - 1);
+        } else {
+            // Check if input matches a component name
+            for (String component : components) {
+                if (component.equalsIgnoreCase(input)) {
+                    selectedComponent = component;
+                    break;
+                }
+            }
+            
+            if (selectedComponent == null) {
+                return CommandResponse.error("Component '" + input + "' not found. Please enter a valid component name or number.");
+            }
+        }
+        
+        // Component selected successfully, now start dependency flow
+        sessionState.setAwaitingDependencySourceSelection(false);
+        sessionState.addData("depSourceComponent", selectedComponent);
+        
+        return startDependencyFlow(sessionState, selectedComponent);
     }
     
     /**
