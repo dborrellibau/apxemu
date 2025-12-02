@@ -75,6 +75,64 @@ export const convertToReactFlow = (hierarchicalData) => {
     processContainer(container);
   });
   
+  // Process dependencies - second pass to create dependency edges
+  const processDependencies = (container) => {
+    if (container.dependencyNames && container.dependencyNames.length > 0) {
+      // Find the source node for this container
+      const sourceNode = nodes.find(n => n.data.id === container.id);
+      
+      if (sourceNode) {
+        container.dependencyNames.forEach(depName => {
+          // Find target node by name (need to search in all containers)
+          const targetNode = nodes.find(n => n.data.name === depName);
+          
+          if (targetNode) {
+            edges.push({
+              id: `dependency-${sourceNode.id}-${targetNode.id}`,
+              source: sourceNode.id,
+              target: targetNode.id,
+              type: 'smoothstep',
+              animated: false,
+              style: {
+                stroke: '#00ff00',  // Green for dependencies
+                strokeWidth: 2,
+                strokeDasharray: '5,5'  // Dashed line to distinguish from hierarchy
+              },
+              markerEnd: {
+                type: 'arrowclosed',
+                color: '#00ff00',
+                width: 20,
+                height: 20,
+              },
+              label: 'depends on',
+              labelStyle: {
+                fontSize: '10px',
+                fontWeight: '600',
+                fill: '#00ff00'
+              },
+              labelBgStyle: {
+                fill: '#1a1a1a',
+                fillOpacity: 0.8
+              }
+            });
+          }
+        });
+      }
+    }
+    
+    // Recursively process children
+    if (container.children && container.children.length > 0) {
+      container.children.forEach(child => {
+        processDependencies(child);
+      });
+    }
+  };
+  
+  // Process dependencies for all root containers
+  hierarchicalData.forEach(container => {
+    processDependencies(container);
+  });
+  
   return { nodes, edges };
 };
 
