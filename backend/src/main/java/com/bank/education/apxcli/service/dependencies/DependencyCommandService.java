@@ -231,8 +231,38 @@ public class DependencyCommandService {
      * Handles user input of artifact ID and creates the dependency
      */
     public CommandResponse handleArtifactIdInput(FormState sessionState, String artifactId) {
-        // TODO: Implement in ETAPA 8
-        return CommandResponse.error("Artifact ID input not yet implemented (ETAPA 8)");
+        String sourceComponent = sessionState.getData("depSourceComponent");
+        String targetType = sessionState.getData("depTargetType");
+        
+        if (sourceComponent == null || targetType == null) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("Session error: missing dependency data. Please try again.");
+        }
+        
+        artifactId = artifactId.trim();
+        
+        // Validation 1: Validate artifact ID format matches expected type
+        ArtifactIdValidationService.ValidationResult validationResult = 
+            validationService.validateArtifactId(artifactId, targetType);
+        
+        if (!validationResult.isSuccess()) {
+            return CommandResponse.error(validationResult.getErrorMessage());
+        }
+        
+        // Validation 2: Check if it's a LIB_IMPL (not allowed as dependency target)
+        if (validationService.isLibImpl(artifactId)) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("LIB_IMPL components cannot be used as dependency targets. Use the base LIB instead.");
+        }
+        
+        // All specific validations passed - delegate to DependencyManagementService
+        // (it will handle existence checks, duplicates, and circular dependency validation)
+        CommandResponse response = dependencyManagementService.createDependency(sourceComponent, artifactId);
+        
+        // Clear dependency flow data regardless of success/failure
+        sessionState.clearDependencyFlowData();
+        
+        return response;
     }
     
     /**
