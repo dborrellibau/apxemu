@@ -187,8 +187,44 @@ public class DependencyCommandService {
      * Handles user selection of dependency type from menu
      */
     public CommandResponse handleDependencyTypeSelection(FormState sessionState, String input) {
-        // TODO: Implement in ETAPA 7
-        return CommandResponse.error("Type selection not yet implemented (ETAPA 7)");
+        String sourceType = sessionState.getData("depSourceType");
+        if (sourceType == null) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("Session error: source type not found. Please try again.");
+        }
+        
+        // Get allowed types
+        List<String> allowedTypes = getAllowedDependencyTypes(sourceType);
+        
+        String selectedType = null;
+        
+        // Check if input is a number (menu selection)
+        if (input.matches("^\\d+$")) {
+            int selection = Integer.parseInt(input);
+            if (selection < 1 || selection > allowedTypes.size()) {
+                return CommandResponse.error("Invalid selection. Please enter a number between 1 and " + allowedTypes.size());
+            }
+            selectedType = allowedTypes.get(selection - 1);
+        } else {
+            // Check if input matches a type name (case insensitive)
+            for (String type : allowedTypes) {
+                if (type.equalsIgnoreCase(input)) {
+                    selectedType = type;
+                    break;
+                }
+            }
+            
+            if (selectedType == null) {
+                return CommandResponse.error("Invalid type '" + input + "'. Please enter a valid type name or number.");
+            }
+        }
+        
+        // Type selected successfully
+        sessionState.setAwaitingDependencyTypeSelection(false);
+        sessionState.setAwaitingDependencyArtifactId(true);
+        sessionState.addData("depTargetType", selectedType);
+        
+        return CommandResponse.info("Enter artifact ID of the dependency (" + selectedType + "):");
     }
     
     /**
@@ -201,9 +237,44 @@ public class DependencyCommandService {
     
     /**
      * Gets list of allowed dependency types based on source component type
+     * 
+     * Dependency rules:
+     * - DTO can depend on: DTO
+     * - LIB can depend on: DTO
+     * - LIB_IMPL can depend on: LIB, DTO
+     * - TRX can depend on: LIB, DTO
      */
     private List<String> getAllowedDependencyTypes(String sourceType) {
-        // TODO: Implement in ETAPA 7
-        return null;
+        List<String> allowedTypes = new java.util.ArrayList<>();
+        
+        switch (sourceType) {
+            case ArtifactIdValidationService.TYPE_DTO:
+                // DTO -> DTO
+                allowedTypes.add(ArtifactIdValidationService.TYPE_DTO);
+                break;
+                
+            case ArtifactIdValidationService.TYPE_LIB:
+                // LIB -> DTO
+                allowedTypes.add(ArtifactIdValidationService.TYPE_DTO);
+                break;
+                
+            case ArtifactIdValidationService.TYPE_LIB_IMPL:
+                // LIB_IMPL -> LIB, DTO
+                allowedTypes.add(ArtifactIdValidationService.TYPE_LIB);
+                allowedTypes.add(ArtifactIdValidationService.TYPE_DTO);
+                break;
+                
+            case ArtifactIdValidationService.TYPE_TRX:
+                // TRX -> LIB, DTO
+                allowedTypes.add(ArtifactIdValidationService.TYPE_LIB);
+                allowedTypes.add(ArtifactIdValidationService.TYPE_DTO);
+                break;
+                
+            default:
+                // Unknown type, return empty list
+                break;
+        }
+        
+        return allowedTypes;
     }
 }
