@@ -143,8 +143,44 @@ public class DependencyCommandService {
      * Detects component type from path and shows dependency type menu
      */
     public CommandResponse startDependencyFlow(FormState sessionState, String componentName) {
-        // TODO: Implement in ETAPA 6
-        return CommandResponse.error("Level 3 flow not yet implemented (ETAPA 6)");
+        // Verify component exists
+        if (!deploymentUnitRepository.findByName(componentName).isPresent()) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("Component '" + componentName + "' not found");
+        }
+        
+        // Detect type from artifact ID using validation service
+        String detectedType = validationService.detectTypeFromArtifactId(componentName);
+        
+        if (detectedType == null) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("Cannot detect component type from '" + componentName + "'. Invalid artifact ID format.");
+        }
+        
+        // Store source component info
+        sessionState.addData("depSourceComponent", componentName);
+        sessionState.addData("depSourceType", detectedType);
+        
+        // Get allowed dependency types for this source type
+        List<String> allowedTypes = getAllowedDependencyTypes(detectedType);
+        
+        if (allowedTypes == null || allowedTypes.isEmpty()) {
+            sessionState.clearDependencyFlowData();
+            return CommandResponse.error("No valid dependency types available for " + detectedType + " components");
+        }
+        
+        // Build menu
+        StringBuilder menu = new StringBuilder();
+        menu.append("Select dependency type for ").append(componentName).append(" (").append(detectedType).append("):\n");
+        for (int i = 0; i < allowedTypes.size(); i++) {
+            menu.append((i + 1)).append(". ").append(allowedTypes.get(i)).append("\n");
+        }
+        menu.append("\nEnter type number or name:");
+        
+        // Set flag
+        sessionState.setAwaitingDependencyTypeSelection(true);
+        
+        return CommandResponse.info(menu.toString());
     }
     
     /**
