@@ -30,6 +30,7 @@ public class CommandParserService {
     private final SystemCommandService systemCommandService;
     private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitNavigationService directoryNavigationService;
+    private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
@@ -39,7 +40,8 @@ public class CommandParserService {
                                InfoCommandService infoCommandService,
                                SystemCommandService systemCommandService,
                                ArchitectureOrchestrationService architectureService,
-                               DeploymentUnitNavigationService directoryNavigationService) {
+                               DeploymentUnitNavigationService directoryNavigationService,
+                               com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService) {
         this.navigationService = navigationService;
         this.componentSelectionService = componentSelectionService;
         this.formInputService = formInputService;
@@ -47,6 +49,7 @@ public class CommandParserService {
         this.systemCommandService = systemCommandService;
         this.architectureService = architectureService;
         this.directoryNavigationService = directoryNavigationService;
+        this.dependencyCommandService = dependencyCommandService;
         
         // Share activeSessions with form services
         this.componentSelectionService.setActiveSessions(activeSessions);
@@ -68,6 +71,17 @@ public class CommandParserService {
         // Check if user is waiting for component selection after apx add
         if (sessionState.isAwaitingComponentSelection()) {
             return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
+        }
+        
+        // Check if user is in dependency flow (ETAPA 9 - new functionality)
+        if (sessionState.isAwaitingDependencySourceSelection()) {
+            return dependencyCommandService.handleSourceComponentInput(sessionState, originalInput);
+        }
+        if (sessionState.isAwaitingDependencyTypeSelection()) {
+            return dependencyCommandService.handleDependencyTypeSelection(sessionState, originalInput);
+        }
+        if (sessionState.isAwaitingDependencyArtifactId()) {
+            return dependencyCommandService.handleArtifactIdInput(sessionState, originalInput);
         }
         
         // Check if user is in an active form session
@@ -152,6 +166,11 @@ public class CommandParserService {
             case "init":
                 return systemCommandService.handleInitCommand(subArgs);
             case "add":
+                // Check if it's "apx add dep" (ETAPA 9 - new functionality)
+                if (subArgs.length > 0 && "dep".equalsIgnoreCase(subArgs[0])) {
+                    return dependencyCommandService.handleAddDepCommand(sessionState);
+                }
+                // Otherwise, normal "apx add" for components
                 return handleAddCommand(sessionId, sessionState, subArgs);
             case "list":
                 return infoCommandService.handleListCommand(subArgs);
