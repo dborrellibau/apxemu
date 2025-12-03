@@ -58,18 +58,25 @@ public class ContainableDto {
             dto.setCode(du.getCode());
             dto.setClassName(du.getClassName());
             
-            // Add dependency names for frontend edge rendering
-            dto.setDependencyNames(
-                du.getDependencies().stream()
-                    .map(DeploymentUnit::getName)
-                    .collect(Collectors.toList())
-            );
+            // Add dependency names ONLY for SIMPLE_OBJECT DeploymentUnits (actual components)
+            // Container DeploymentUnits (DU_ONLINE, DU_LIB) should NOT have dependency lines
+            // ComponentFolders should NEVER have dependencies
+            if (du.getContainerType() == ContainerType.SIMPLE_OBJECT 
+                    && du.getDependencies() != null 
+                    && !du.getDependencies().isEmpty()) {
+                dto.setDependencyNames(
+                    du.getDependencies().stream()
+                        .map(DeploymentUnit::getName)
+                        .collect(Collectors.toList())
+                );
+            }
             
         } else if (containable instanceof ComponentFolder) {
             ComponentFolder folder = (ComponentFolder) containable;
             dto.setEntityType("ComponentFolder");
             dto.setDescription(folder.getDescription());
             dto.setFolderType(folder.getType());
+            // ComponentFolders NEVER have dependencies - do NOT set dependencyNames
         }
         
         // Create children DTOs (both DeploymentUnits and ComponentFolders)

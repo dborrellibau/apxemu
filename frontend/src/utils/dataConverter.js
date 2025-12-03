@@ -78,8 +78,9 @@ export const convertToReactFlow = (hierarchicalData) => {
   // Process dependencies - second pass to create dependency edges
   const processDependencies = (container) => {
     if (container.dependencyNames && container.dependencyNames.length > 0) {
-      // Find the source node for this container
-      const sourceNode = nodes.find(n => n.data.id === container.id);
+      // Find the source node by name (unique identifier) instead of id
+      // Important: We use name because ids can collide between DeploymentUnits and ComponentFolders
+      const sourceNode = nodes.find(n => n.data.name === container.name);
       
       if (sourceNode) {
         container.dependencyNames.forEach(depName => {
