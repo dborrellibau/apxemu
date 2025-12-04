@@ -68,6 +68,11 @@ public class CommandParserService {
         // Get or create session state to track directory
         FormState sessionState = getOrCreateSessionState(sessionId);
         
+        // PRIORITY 1: Check for pending confirmation (highest priority)
+        if (sessionState.getAwaitingConfirmationFor() != null) {
+            return handleConfirmation(sessionState, originalInput);
+        }
+        
         // Check if user is waiting for component selection after apx add
         if (sessionState.isAwaitingComponentSelection()) {
             return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
@@ -253,6 +258,40 @@ public class CommandParserService {
             activeSessions.put(sessionId, state);
         }
         return state;
+    }
+    
+    /**
+     * Handles Y/n confirmation responses for any pending action
+     * Generic handler that dispatches to appropriate service based on action prefix
+     */
+    private CommandResponse handleConfirmation(FormState sessionState, String input) {
+        String action = sessionState.getAwaitingConfirmationFor();
+        sessionState.setAwaitingConfirmationFor(null); // Clear flag immediately
+        
+        String inputLower = input.trim().toLowerCase();
+        
+        // Check for explicit cancellation
+        if ("n".equals(inputLower)) {
+            return CommandResponse.success("Operación cancelada");
+        }
+        
+        // Accept confirmation: Y, y, or Enter (empty)
+        if ("y".equals(inputLower) || input.trim().isEmpty()) {
+            // Dispatch to appropriate service based on action prefix
+            if (action.startsWith("delete-")) {
+                // Future: return deletionCommandService.executeConfirmedDelete(action);
+                return CommandResponse.error("Deletion service not yet implemented");
+            }
+            // Future extension points for other confirmations:
+            // if (action.startsWith("override-")) return formInputService.executeOverride(action);
+            // if (action.startsWith("clear-")) return dependencyCommandService.executeClear(action);
+            
+            return CommandResponse.error("Acción desconocida: " + action);
+        }
+        
+        // Invalid response - re-prompt
+        sessionState.setAwaitingConfirmationFor(action); // Restore flag
+        return CommandResponse.error("Respuesta inválida. Ingrese Y para confirmar, n para cancelar, o presione Enter para confirmar.");
     }
     
     private CommandResponse showHelp() {

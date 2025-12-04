@@ -15,6 +15,9 @@ public class FormState {
     private boolean awaitingDependencyTypeSelection;   // Flag for selecting dependency type
     private boolean awaitingDependencyArtifactId;      // Flag for entering artifact ID
     
+    // Confirmation flow - stores action string like "delete-component-123" or null
+    private String awaitingConfirmationFor;
+    
     public FormState() {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
@@ -22,6 +25,7 @@ public class FormState {
         this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
+        this.awaitingConfirmationFor = null;
     }
     
     public FormState(String formType) {
@@ -155,5 +159,21 @@ public class FormState {
         this.formData.remove("depSourceComponent");
         this.formData.remove("depSourceType");
         this.formData.remove("depTargetType");
+    }
+    
+    /**
+     * Gets the pending confirmation action string
+     * @return action string like "delete-component-123" or null if no confirmation pending
+     */
+    public String getAwaitingConfirmationFor() {
+        return awaitingConfirmationFor;
+    }
+    
+    /**
+     * Sets the pending confirmation action string
+     * @param action string describing what action needs confirmation (e.g., "delete-component-123")
+     */
+    public void setAwaitingConfirmationFor(String action) {
+        this.awaitingConfirmationFor = action;
     }
 }
