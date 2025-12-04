@@ -37,6 +37,9 @@ public class DeploymentUnit implements Containable {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+    
     // Parent folder (for objects contained within folders like DTO, LIB, TRX)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_folder_id")
@@ -198,6 +201,14 @@ public class DeploymentUnit implements Containable {
     
     public void setChildDeploymentUnits(Set<DeploymentUnit> childDeploymentUnits) {
         this.childDeploymentUnits = childDeploymentUnits;
+    }
+    
+    public boolean isDeleted() {
+        return deleted;
+    }
+    
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
     
     // ============== CONTAINABLE INTERFACE IMPLEMENTATION ==============
