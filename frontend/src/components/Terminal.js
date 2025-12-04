@@ -6,7 +6,7 @@ const Terminal = ({ wsService, isConnected }) => {
   const [currentCommand, setCurrentCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [currentPrompt, setCurrentPrompt] = useState('apx> ');
+  const [currentPrompt, setCurrentPrompt] = useState('vether> ');
   const terminalRef = useRef(null);
   const inputRef = useRef(null);
 

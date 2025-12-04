@@ -11,6 +11,11 @@ export const convertToReactFlow = (hierarchicalData) => {
   let nodeId = 1;
   
   const processContainer = (container, parentId = null, level = 0) => {
+    // ETAPA 8: Skip deleted components
+    if (container.deleted === true) {
+      return null; // Don't process deleted containers
+    }
+    
     const currentNodeId = `node-${nodeId++}`;
     
     // Create node
@@ -64,6 +69,7 @@ export const convertToReactFlow = (hierarchicalData) => {
     if (container.children && container.children.length > 0) {
       container.children.forEach(child => {
         processContainer(child, currentNodeId, level + 1);
+        // Note: deleted children will be filtered out automatically in processContainer
       });
     }
     
@@ -73,6 +79,70 @@ export const convertToReactFlow = (hierarchicalData) => {
   // Process all root containers
   hierarchicalData.forEach(container => {
     processContainer(container);
+  });
+  
+  // Process dependencies - second pass to create dependency edges
+  const processDependencies = (container) => {
+    // ETAPA 8: Skip deleted components in dependency processing
+    if (container.deleted === true) {
+      return;
+    }
+    
+    if (container.dependencyNames && container.dependencyNames.length > 0) {
+      // Find the source node by name (unique identifier) instead of id
+      // Important: We use name because ids can collide between DeploymentUnits and ComponentFolders
+      const sourceNode = nodes.find(n => n.data.name === container.name);
+      
+      if (sourceNode) {
+        container.dependencyNames.forEach(depName => {
+          // Find target node by name (need to search in all containers)
+          const targetNode = nodes.find(n => n.data.name === depName);
+          
+          if (targetNode) {
+            edges.push({
+              id: `dependency-${sourceNode.id}-${targetNode.id}`,
+              source: sourceNode.id,
+              target: targetNode.id,
+              type: 'smoothstep',
+              animated: false,
+              style: {
+                stroke: '#00ff00',  // Green for dependencies
+                strokeWidth: 2,
+                strokeDasharray: '5,5'  // Dashed line to distinguish from hierarchy
+              },
+              markerEnd: {
+                type: 'arrowclosed',
+                color: '#00ff00',
+                width: 20,
+                height: 20,
+              },
+              label: 'depends on',
+              labelStyle: {
+                fontSize: '10px',
+                fontWeight: '600',
+                fill: '#00ff00'
+              },
+              labelBgStyle: {
+                fill: '#1a1a1a',
+                fillOpacity: 0.8
+              }
+            });
+          }
+        });
+      }
+    }
+    
+    // Recursively process children
+    if (container.children && container.children.length > 0) {
+      container.children.forEach(child => {
+        processDependencies(child);
+      });
+    }
+  };
+  
+  // Process dependencies for all root containers
+  hierarchicalData.forEach(container => {
+    processDependencies(container);
   });
   
   return { nodes, edges };

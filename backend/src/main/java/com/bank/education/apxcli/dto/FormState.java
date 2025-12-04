@@ -8,10 +8,28 @@ public class FormState {
     private int currentStep;
     private Map<String, String> formData;
     private String currentDirectory; // For navigation: "root" or "<du-name>/<folder>"
+    private boolean awaitingComponentSelection; // Flag for apx add component selection
+    
+    // Dependency flow flags
+    private boolean awaitingDependencySourceSelection; // Flag for selecting source component (levels 1-2)
+    private boolean awaitingDependencyTypeSelection;   // Flag for selecting dependency type
+    private boolean awaitingDependencyArtifactId;      // Flag for entering artifact ID
+    
+    // Deletion flow flag - indicates user is in deletion menu/selection
+    private boolean awaitingDeletionSelection;
+    
+    // Confirmation flow - stores action string like "delete-component-123" or null
+    private String awaitingConfirmationFor;
     
     public FormState() {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
+        this.awaitingComponentSelection = false;
+        this.awaitingDependencySourceSelection = false;
+        this.awaitingDependencyTypeSelection = false;
+        this.awaitingDependencyArtifactId = false;
+        this.awaitingDeletionSelection = false;
+        this.awaitingConfirmationFor = null;
     }
     
     public FormState(String formType) {
@@ -89,9 +107,103 @@ public class FormState {
     
     public String getCurrentPrompt() {
         if ("root".equals(currentDirectory)) {
-            return "apx> ";
+            return "vether> ";
         } else {
-            return "apx:" + currentDirectory + "> ";
+            return "vether/" + currentDirectory + "> ";
         }
+    }
+    
+    public boolean isAwaitingComponentSelection() {
+        return awaitingComponentSelection;
+    }
+    
+    public void setAwaitingComponentSelection(boolean awaitingComponentSelection) {
+        this.awaitingComponentSelection = awaitingComponentSelection;
+    }
+    
+    // Dependency flow getters and setters
+    public boolean isAwaitingDependencySourceSelection() {
+        return awaitingDependencySourceSelection;
+    }
+    
+    public void setAwaitingDependencySourceSelection(boolean awaitingDependencySourceSelection) {
+        this.awaitingDependencySourceSelection = awaitingDependencySourceSelection;
+    }
+    
+    public boolean isAwaitingDependencyTypeSelection() {
+        return awaitingDependencyTypeSelection;
+    }
+    
+    public void setAwaitingDependencyTypeSelection(boolean awaitingDependencyTypeSelection) {
+        this.awaitingDependencyTypeSelection = awaitingDependencyTypeSelection;
+    }
+    
+    public boolean isAwaitingDependencyArtifactId() {
+        return awaitingDependencyArtifactId;
+    }
+    
+    public void setAwaitingDependencyArtifactId(boolean awaitingDependencyArtifactId) {
+        this.awaitingDependencyArtifactId = awaitingDependencyArtifactId;
+    }
+    
+    /**
+     * Clears all dependency flow flags and temporary data
+     */
+    public void clearDependencyFlowData() {
+        this.awaitingDependencySourceSelection = false;
+        this.awaitingDependencyTypeSelection = false;
+        this.awaitingDependencyArtifactId = false;
+        clearPendingDepData();
+    }
+    
+    /**
+     * Clears temporary dependency data from formData map
+     */
+    public void clearPendingDepData() {
+        this.formData.remove("depSourceComponent");
+        this.formData.remove("depSourceType");
+        this.formData.remove("depTargetType");
+    }
+    
+    /**
+     * Gets the pending confirmation action string
+     * @return action string like "delete-component-123" or null if no confirmation pending
+     */
+    public String getAwaitingConfirmationFor() {
+        return awaitingConfirmationFor;
+    }
+    
+    /**
+     * Sets the pending confirmation action string
+     * @param action string describing what action needs confirmation (e.g., "delete-component-123")
+     */
+    public void setAwaitingConfirmationFor(String action) {
+        this.awaitingConfirmationFor = action;
+    }
+    
+    /**
+     * Check if user is in deletion flow
+     */
+    public boolean isAwaitingDeletionSelection() {
+        return awaitingDeletionSelection;
+    }
+    
+    /**
+     * Set deletion flow flag
+     */
+    public void setAwaitingDeletionSelection(boolean awaitingDeletionSelection) {
+        this.awaitingDeletionSelection = awaitingDeletionSelection;
+    }
+    
+    /**
+     * Clear deletion flow data
+     */
+    public void clearDeletionFlowData() {
+        this.awaitingDeletionSelection = false;
+        this.formData.remove("deletionContext");
+        this.formData.remove("deletionDU");
+        this.formData.remove("deletionFolder");
+        this.formData.remove("deletionStep");
+        this.formData.remove("deletionComponentCount");
     }
 }

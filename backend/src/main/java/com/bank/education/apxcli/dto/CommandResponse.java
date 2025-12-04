@@ -18,7 +18,7 @@ public class CommandResponse {
         this.output = output;
         this.type = type;
         this.data = data;
-        this.prompt = "apx> "; // Default prompt
+        this.prompt = "vether> "; // Default prompt
     }
     
     public enum ResponseType {

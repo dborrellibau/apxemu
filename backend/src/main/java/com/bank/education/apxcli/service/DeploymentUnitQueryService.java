@@ -46,8 +46,14 @@ public class DeploymentUnitQueryService {
             return CommandResponse.info(message);
         }
         
+        // ETAPA 9: Add [DELETED] marker to deleted units
         List<String> unitNames = units.stream()
-            .map(unit -> unit.getType().name().toLowerCase() + ": " + unit.getName())
+            .map(unit -> {
+                String prefix = unit.getType().name().toLowerCase() + ": ";
+                String name = unit.getName();
+                String suffix = unit.isDeleted() ? " \u001B[31m[DELETED]\u001B[0m" : "";
+                return prefix + name + suffix;
+            })
             .collect(Collectors.toList());
         
         return new CommandResponse(
@@ -152,5 +158,14 @@ public class DeploymentUnitQueryService {
             case "trx": case "trxs": return DeploymentUnit.DeploymentUnitType.TRX;
             default: return null;
         }
+    }
+    
+    /**
+     * Get UUAA from a deployment unit by name
+     */
+    public String getDeploymentUnitUuaa(String duName) {
+        return repository.findByName(duName)
+            .map(DeploymentUnit::getUuaa)
+            .orElse(null);
     }
 }

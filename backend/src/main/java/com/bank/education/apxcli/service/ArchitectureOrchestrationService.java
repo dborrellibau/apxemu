@@ -2,6 +2,7 @@ package com.bank.education.apxcli.service;
 
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.ContainableDto;
+import com.bank.education.apxcli.service.dependencies.DependencyManagementService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -199,5 +200,34 @@ public class ArchitectureOrchestrationService {
         
         // Create the dependency
         return dependencyService.createDependency(sourceName, targetName);
+    }
+    
+    /**
+     * Lists components within a specific folder of a deployment unit
+     */
+    public CommandResponse listComponentsInFolder(String duName, String folder) {
+        return infoService.listComponentsInFolder(duName, folder);
+    }
+    
+    /**
+     * Check if a component exists within a specific folder
+     */
+    public boolean componentExistsInFolder(String duName, String folder, String componentName) {
+        return infoService.componentExistsInFolder(duName, folder, componentName);
+    }
+    
+    /**
+     * Get UUAA from a deployment unit by name
+     */
+    public String getDeploymentUnitUuaa(String duName) {
+        return queryService.getDeploymentUnitUuaa(duName);
+    }
+
+    /**
+     * Lists all components across all folders in a deployment unit
+     * Used for dependency flow when selecting source component
+     */
+    public List<String> listAllComponentsInDU(String duName) {
+        return infoService.listAllComponentsInDU(duName);
     }
 }

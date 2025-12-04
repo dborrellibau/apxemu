@@ -37,6 +37,9 @@ public class DeploymentUnit implements Containable {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+    
     // Parent folder (for objects contained within folders like DTO, LIB, TRX)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_folder_id")
@@ -62,9 +65,6 @@ public class DeploymentUnit implements Containable {
         inverseJoinColumns = @JoinColumn(name = "target_unit_id")
     )
     private Set<DeploymentUnit> dependencies = new HashSet<>();
-    
-    @ManyToMany(mappedBy = "dependencies")
-    private Set<DeploymentUnit> dependents = new HashSet<>();
     
     // Constructors
     public DeploymentUnit() {
@@ -176,23 +176,13 @@ public class DeploymentUnit implements Containable {
         this.dependencies = dependencies;
     }
     
-    public Set<DeploymentUnit> getDependents() {
-        return dependents;
-    }
-    
-    public void setDependents(Set<DeploymentUnit> dependents) {
-        this.dependents = dependents;
-    }
-    
     // Helper methods
     public void addDependency(DeploymentUnit dependency) {
         this.dependencies.add(dependency);
-        dependency.getDependents().add(this);
     }
     
     public void removeDependency(DeploymentUnit dependency) {
         this.dependencies.remove(dependency);
-        dependency.getDependents().remove(this);
     }
     
     // NEW: Getter/Setter for parent DeploymentUnit
@@ -211,6 +201,14 @@ public class DeploymentUnit implements Containable {
     
     public void setChildDeploymentUnits(Set<DeploymentUnit> childDeploymentUnits) {
         this.childDeploymentUnits = childDeploymentUnits;
+    }
+    
+    public boolean isDeleted() {
+        return deleted;
+    }
+    
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
     
     // ============== CONTAINABLE INTERFACE IMPLEMENTATION ==============

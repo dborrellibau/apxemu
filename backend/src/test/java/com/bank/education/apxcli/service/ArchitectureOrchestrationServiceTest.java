@@ -1,6 +1,7 @@
 package com.bank.education.apxcli.service;
 
 import com.bank.education.apxcli.dto.CommandResponse;
+import com.bank.education.apxcli.service.dependencies.DependencyManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

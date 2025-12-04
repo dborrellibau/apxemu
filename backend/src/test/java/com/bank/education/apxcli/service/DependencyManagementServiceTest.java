@@ -3,6 +3,7 @@ package com.bank.education.apxcli.service;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
+import com.bank.education.apxcli.service.dependencies.DependencyManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -270,30 +271,6 @@ class DependencyManagementServiceTest {
         assertEquals(2, result.size());
         assertTrue(result.contains(unitB));
         assertTrue(result.contains(unitC));
-    }
-    
-    @Test
-    void getAllDependents_ShouldReturnAllDependentUnits() {
-        // Arrange
-        String unitName = "unit-c";
-        DeploymentUnit unitA = createTestDeploymentUnit("unit-a", 1L);
-        DeploymentUnit unitB = createTestDeploymentUnit("unit-b", 2L);
-        DeploymentUnit unitC = createTestDeploymentUnit("unit-c", 3L);
-        
-        // A -> C, B -> C
-        unitA.addDependency(unitC);
-        unitB.addDependency(unitC);
-        
-        when(repository.findByName(unitName)).thenReturn(Optional.of(unitC));
-        when(repository.findAll()).thenReturn(Arrays.asList(unitA, unitB, unitC));
-        
-        // Act
-        Set<DeploymentUnit> result = dependencyService.getAllDependents(unitName);
-        
-        // Assert
-        assertEquals(2, result.size());
-        assertTrue(result.contains(unitA));
-        assertTrue(result.contains(unitB));
     }
     
     @Test

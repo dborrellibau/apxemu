@@ -31,6 +31,12 @@ public class ContainableDto {
     // For ComponentFolder specific fields
     private ComponentFolder.FolderType folderType;
     
+    // Soft delete flag
+    private boolean deleted;
+    
+    // Dependencies (only for DeploymentUnit)
+    private List<String> dependencyNames;
+    
     // Hierarchical structure
     private List<ContainableDto> children;
     
@@ -54,16 +60,42 @@ public class ContainableDto {
             dto.setUuaa(du.getUuaa());
             dto.setCode(du.getCode());
             dto.setClassName(du.getClassName());
+            dto.setDeleted(du.isDeleted()); // ETAPA 8: Set deleted flag
+            
+            // Add dependency names ONLY for SIMPLE_OBJECT DeploymentUnits (actual components)
+            // Container DeploymentUnits (DU_ONLINE, DU_LIB) should NOT have dependency lines
+            // ComponentFolders should NEVER have dependencies
+            if (du.getContainerType() == ContainerType.SIMPLE_OBJECT 
+                    && du.getDependencies() != null 
+                    && !du.getDependencies().isEmpty()) {
+                dto.setDependencyNames(
+                    du.getDependencies().stream()
+                        .map(DeploymentUnit::getName)
+                        .collect(Collectors.toList())
+                );
+            }
             
         } else if (containable instanceof ComponentFolder) {
             ComponentFolder folder = (ComponentFolder) containable;
             dto.setEntityType("ComponentFolder");
             dto.setDescription(folder.getDescription());
             dto.setFolderType(folder.getType());
+            dto.setDeleted(false); // ETAPA 8: Folders are never deleted
+            // ComponentFolders NEVER have dependencies - do NOT set dependencyNames
         }
         
         // Create children DTOs (both DeploymentUnits and ComponentFolders)
-        List<ContainableDto> children = containable.getChildDeploymentUnits().stream()
+        // ETAPA 8: Filter out deleted DeploymentUnits
+        List<DeploymentUnit> allChildren = containable.getChildDeploymentUnits();
+        long deletedCount = allChildren.stream().filter(DeploymentUnit::isDeleted).count();
+        
+        if (deletedCount > 0) {
+            System.out.println("DEBUG ContainableDto.from(): Container '" + containable.getName() 
+                + "' has " + deletedCount + " deleted children out of " + allChildren.size());
+        }
+        
+        List<ContainableDto> children = allChildren.stream()
+                .filter(du -> !du.isDeleted()) // Skip deleted components
                 .map(ContainableDto::from)
                 .collect(Collectors.toList());
         
@@ -109,6 +141,12 @@ public class ContainableDto {
     
     public ComponentFolder.FolderType getFolderType() { return folderType; }
     public void setFolderType(ComponentFolder.FolderType folderType) { this.folderType = folderType; }
+    
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    
+    public List<String> getDependencyNames() { return dependencyNames; }
+    public void setDependencyNames(List<String> dependencyNames) { this.dependencyNames = dependencyNames; }
     
     public List<ContainableDto> getChildren() { return children; }
     public void setChildren(List<ContainableDto> children) { this.children = children; }

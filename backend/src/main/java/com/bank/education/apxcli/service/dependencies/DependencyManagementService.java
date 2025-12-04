@@ -1,8 +1,9 @@
-package com.bank.education.apxcli.service;
+package com.bank.education.apxcli.service.dependencies;
 
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
+import com.bank.education.apxcli.service.DiagramService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -152,28 +153,6 @@ public class DependencyManagementService {
             collected.add(dependency);
             collectAllDependencies(dependency, collected, visited);
         }
-    }
-    
-    /**
-     * Gets all dependents of a deployment unit (units that depend on this one)
-     */
-    public Set<DeploymentUnit> getAllDependents(String unitName) {
-        Optional<DeploymentUnit> unitOpt = repository.findByName(unitName);
-        if (!unitOpt.isPresent()) {
-            return new HashSet<>();
-        }
-        
-        DeploymentUnit unit = unitOpt.get();
-        Set<DeploymentUnit> allDependents = new HashSet<>();
-        
-        // Find all units that have this unit as a dependency
-        for (DeploymentUnit otherUnit : repository.findAll()) {
-            if (otherUnit.getDependencies().contains(unit)) {
-                allDependents.add(otherUnit);
-            }
-        }
-        
-        return allDependents;
     }
     
     /**
