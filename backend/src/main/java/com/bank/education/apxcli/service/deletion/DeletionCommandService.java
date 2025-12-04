@@ -6,6 +6,7 @@ import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -131,10 +132,33 @@ public class DeletionCommandService {
      * Level 2 (du-name/folder): Show component list from folder
      */
     private CommandResponse showFolderContextMenu(FormState sessionState, String duName, String folderName) {
+        System.out.println("=== DEBUG showFolderContextMenu ===");
+        System.out.println("duName: " + duName);
+        System.out.println("folderName: " + folderName);
+        
         // Get all components in this folder
         List<DeploymentUnit> components = getComponentsInFolder(duName, folderName);
+        System.out.println("Components found: " + components.size());
         
         if (components.isEmpty()) {
+            System.out.println("No components found - showing debug message");
+            sessionState.clearDeletionFlowData(); // Clear state on error
+            
+            // Debug: Show what folders exist
+            DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
+            if (du != null) {
+                StringBuilder debugMsg = new StringBuilder();
+                debugMsg.append("No components found in folder '").append(folderName).append("'.\n\n");
+                debugMsg.append("Available folders in ").append(duName).append(":\n");
+                for (com.bank.education.apxcli.model.ComponentFolder folder : du.getComponentFolders()) {
+                    debugMsg.append("  - ").append(folder.getType().name()).append(" (")
+                            .append(folder.getContainedUnits().size()).append(" components)\n");
+                }
+                System.out.println("Debug message to send: " + debugMsg.toString());
+                return CommandResponse.error(debugMsg.toString());
+            }
+            
+            System.out.println("DU not found - returning generic error");
             return CommandResponse.error("No components found in folder '" + folderName + "'");
         }
         
@@ -213,6 +237,7 @@ public class DeletionCommandService {
      * ETAPA 5: Process user selection in deletion flow
      * Handles type selection, component selection, etc.
      */
+    @Transactional
     public CommandResponse handleDeletionSelection(FormState sessionState, String input) {
         String deletionStep = sessionState.getData("deletionStep");
         String deletionContext = sessionState.getData("deletionContext");
@@ -348,8 +373,8 @@ public class DeletionCommandService {
      * Show list of components by type (dto/lib/trx)
      */
     private CommandResponse showComponentListForType(FormState sessionState, String duName, String folderType) {
-        // Redirect to folder context menu
-        sessionState.clearDeletionFlowData();
+        // Redirect to folder context menu WITHOUT clearing state
+        // The state will be managed by showFolderContextMenu
         return showFolderContextMenu(sessionState, duName, folderType);
     }
     
@@ -362,9 +387,13 @@ public class DeletionCommandService {
             return new java.util.ArrayList<>();
         }
         
+        // Normalize folder name to match ComponentFolder enum
+        String normalizedFolderName = normalizeFolderName(folderName);
+        
         // Find the folder by name
         for (com.bank.education.apxcli.model.ComponentFolder folder : du.getComponentFolders()) {
-            if (folder.getType().name().equalsIgnoreCase(folderName)) {
+            String folderTypeName = folder.getType().name();
+            if (folderTypeName.equalsIgnoreCase(normalizedFolderName)) {
                 // Return non-deleted components
                 return folder.getContainedUnits().stream()
                     .filter(unit -> !unit.isDeleted())
@@ -373,6 +402,29 @@ public class DeletionCommandService {
         }
         
         return new java.util.ArrayList<>();
+    }
+    
+    /**
+     * Helper: Normalize folder name for enum matching
+     * Maps user input like "dto", "lib", "trx" to ComponentFolder.FolderType enum names
+     */
+    private String normalizeFolderName(String folderName) {
+        String lower = folderName.toLowerCase();
+        switch (lower) {
+            case "dto":
+            case "dtos":
+                return "DTO";
+            case "lib":
+            case "library":
+            case "libs":
+                return "LIBRARY";
+            case "trx":
+            case "transaction":
+            case "transactions":
+                return "TRANSACTIONS";
+            default:
+                return folderName.toUpperCase();
+        }
     }
     
     /**
