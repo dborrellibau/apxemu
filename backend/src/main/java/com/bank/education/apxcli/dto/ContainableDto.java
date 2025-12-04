@@ -85,7 +85,17 @@ public class ContainableDto {
         }
         
         // Create children DTOs (both DeploymentUnits and ComponentFolders)
-        List<ContainableDto> children = containable.getChildDeploymentUnits().stream()
+        // ETAPA 8: Filter out deleted DeploymentUnits
+        List<DeploymentUnit> allChildren = containable.getChildDeploymentUnits();
+        long deletedCount = allChildren.stream().filter(DeploymentUnit::isDeleted).count();
+        
+        if (deletedCount > 0) {
+            System.out.println("DEBUG ContainableDto.from(): Container '" + containable.getName() 
+                + "' has " + deletedCount + " deleted children out of " + allChildren.size());
+        }
+        
+        List<ContainableDto> children = allChildren.stream()
+                .filter(du -> !du.isDeleted()) // Skip deleted components
                 .map(ContainableDto::from)
                 .collect(Collectors.toList());
         

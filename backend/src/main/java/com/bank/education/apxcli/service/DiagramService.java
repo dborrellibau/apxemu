@@ -4,6 +4,7 @@ import com.bank.education.apxcli.dto.ContainableDto;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,16 +20,23 @@ public class DiagramService {
         this.repository = repository;
     }
     
+    @Transactional
     public void notifyDiagramUpdate() {
         try {
             List<ContainableDto> units = repository.findAllWithFolders().stream()
                 .filter(du -> du.getParentDeploymentUnit() == null && du.getParentFolder() == null) // Only root level units
                 .map(ContainableDto::from)
                 .collect(Collectors.toList());
+            
+            System.out.println("=== DEBUG: Sending diagram update ===");
+            System.out.println("Total root units: " + units.size());
+            
             DiagramData diagramData = new DiagramData(units);
             messagingTemplate.convertAndSend("/topic/diagram-updates", diagramData);
+            System.out.println("Diagram update sent successfully");
         } catch (Exception e) {
             System.err.println("Error notifying diagram update: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     

@@ -5,6 +5,7 @@ import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
+import com.bank.education.apxcli.service.DiagramService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +25,15 @@ public class DeletionCommandService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitRepository deploymentUnitRepository;
+    private final DiagramService diagramService;
     
     public DeletionCommandService(
             ArchitectureOrchestrationService architectureService,
-            DeploymentUnitRepository deploymentUnitRepository) {
+            DeploymentUnitRepository deploymentUnitRepository,
+            DiagramService diagramService) {
         this.architectureService = architectureService;
         this.deploymentUnitRepository = deploymentUnitRepository;
+        this.diagramService = diagramService;
     }
     
     /**
@@ -477,6 +481,9 @@ public class DeletionCommandService {
         component.setDeleted(true);
         deploymentUnitRepository.save(component);
         
+        // Notify frontend to update diagram
+        diagramService.notifyDiagramUpdate();
+        
         // Build success message
         StringBuilder message = new StringBuilder();
         message.append("✓ Component successfully marked as deleted\n");
@@ -484,9 +491,7 @@ public class DeletionCommandService {
         message.append("Component: ").append(componentName).append("\n");
         message.append("Type: ").append(componentType).append("\n");
         message.append("\n");
-        message.append("\u001B[33mNOTE: The component has been soft-deleted (marked as inactive).\n");
-        message.append("It will be filtered from the architecture diagram.\n");
-        message.append("If this component is referenced as a dependency elsewhere,\n");
+        message.append("\u001B[33mNOTE: If this component is referenced as a dependency elsewhere,\n");
         message.append("remember to remove those dependencies manually.\u001B[0m");
         
         return CommandResponse.success(message.toString());
