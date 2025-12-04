@@ -15,6 +15,9 @@ public class FormState {
     private boolean awaitingDependencyTypeSelection;   // Flag for selecting dependency type
     private boolean awaitingDependencyArtifactId;      // Flag for entering artifact ID
     
+    // Deletion flow flag - indicates user is in deletion menu/selection
+    private boolean awaitingDeletionSelection;
+    
     // Confirmation flow - stores action string like "delete-component-123" or null
     private String awaitingConfirmationFor;
     
@@ -25,6 +28,7 @@ public class FormState {
         this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
+        this.awaitingDeletionSelection = false;
         this.awaitingConfirmationFor = null;
     }
     
@@ -175,5 +179,31 @@ public class FormState {
      */
     public void setAwaitingConfirmationFor(String action) {
         this.awaitingConfirmationFor = action;
+    }
+    
+    /**
+     * Check if user is in deletion flow
+     */
+    public boolean isAwaitingDeletionSelection() {
+        return awaitingDeletionSelection;
+    }
+    
+    /**
+     * Set deletion flow flag
+     */
+    public void setAwaitingDeletionSelection(boolean awaitingDeletionSelection) {
+        this.awaitingDeletionSelection = awaitingDeletionSelection;
+    }
+    
+    /**
+     * Clear deletion flow data
+     */
+    public void clearDeletionFlowData() {
+        this.awaitingDeletionSelection = false;
+        this.formData.remove("deletionContext");
+        this.formData.remove("deletionDU");
+        this.formData.remove("deletionFolder");
+        this.formData.remove("deletionStep");
+        this.formData.remove("deletionComponentCount");
     }
 }

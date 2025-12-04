@@ -86,6 +86,7 @@ public class DeletionCommandService {
         // Set deletion context
         sessionState.addData("deletionContext", "root");
         sessionState.addData("deletionStep", "type-selection");
+        sessionState.setAwaitingDeletionSelection(true);
         
         return CommandResponse.info(menu.toString());
     }
@@ -121,6 +122,7 @@ public class DeletionCommandService {
         sessionState.addData("deletionContext", "du-level");
         sessionState.addData("deletionDU", duName);
         sessionState.addData("deletionStep", "type-selection");
+        sessionState.setAwaitingDeletionSelection(true);
         
         return CommandResponse.info(menu.toString());
     }
@@ -129,16 +131,263 @@ public class DeletionCommandService {
      * Level 2 (du-name/folder): Show component list from folder
      */
     private CommandResponse showFolderContextMenu(FormState sessionState, String duName, String folderName) {
-        // TODO ETAPA 4: List components in folder
-        return CommandResponse.error("Component listing from folder not yet implemented");
+        // Get all components in this folder
+        List<DeploymentUnit> components = getComponentsInFolder(duName, folderName);
+        
+        if (components.isEmpty()) {
+            return CommandResponse.error("No components found in folder '" + folderName + "'");
+        }
+        
+        // Build selection menu
+        StringBuilder menu = new StringBuilder();
+        menu.append("╔══════════════════════════════════════════════════════════╗\n");
+        menu.append("║          SELECCIONAR COMPONENTE A ELIMINAR               ║\n");
+        menu.append("╚══════════════════════════════════════════════════════════╝\n");
+        menu.append("\n");
+        menu.append("Ubicación: ").append(duName).append("/").append(folderName).append("\n");
+        menu.append("\n");
+        
+        for (int i = 0; i < components.size(); i++) {
+            DeploymentUnit component = components.get(i);
+            menu.append(String.format("  %d. %s", i + 1, component.getName()));
+            if (component.getDescription() != null && !component.getDescription().isEmpty()) {
+                menu.append(" - ").append(component.getDescription());
+            }
+            menu.append("\n");
+        }
+        
+        menu.append("\n");
+        menu.append("Ingrese el número o nombre del componente: ");
+        
+        // Store context for next step
+        sessionState.addData("deletionContext", "folder-level");
+        sessionState.addData("deletionDU", duName);
+        sessionState.addData("deletionFolder", folderName);
+        sessionState.addData("deletionStep", "component-selection");
+        sessionState.addData("deletionComponentCount", String.valueOf(components.size()));
+        sessionState.setAwaitingDeletionSelection(true);
+        
+        return CommandResponse.info(menu.toString());
     }
     
     /**
      * Level 3 (du-name/folder/component): Direct deletion confirmation
      */
     private CommandResponse showComponentDeletionConfirmation(FormState sessionState, String duName, String folderName, String componentName) {
-        // TODO ETAPA 4: Show component info and request confirmation
-        return CommandResponse.error("Direct component deletion not yet implemented");
+        // Find the component
+        DeploymentUnit component = deploymentUnitRepository.findByName(componentName).orElse(null);
+        if (component == null) {
+            return CommandResponse.error("Component '" + componentName + "' not found");
+        }
+        
+        // Check if already deleted
+        if (component.isDeleted()) {
+            return CommandResponse.error("Component '" + componentName + "' is already marked as deleted");
+        }
+        
+        // Build confirmation message
+        StringBuilder message = new StringBuilder();
+        message.append("╔══════════════════════════════════════════════════════════╗\n");
+        message.append("║          CONFIRMACIÓN DE ELIMINACIÓN                     ║\n");
+        message.append("╚══════════════════════════════════════════════════════════╝\n");
+        message.append("\n");
+        message.append("Componente: ").append(componentName).append("\n");
+        message.append("Ubicación: ").append(duName).append("/").append(folderName).append("\n");
+        message.append("Tipo: ").append(component.getType().getValue()).append("\n");
+        if (component.getDescription() != null) {
+            message.append("Descripción: ").append(component.getDescription()).append("\n");
+        }
+        message.append("\n");
+        message.append("\u001B[33mNOTA: Si este elemento es dependencia de otro, recordá eliminar\n");
+        message.append("      la dependencia manualmente con el comando apropiado.\u001B[0m\n");
+        message.append("\n");
+        message.append("¿Confirmar eliminación? (Y/n): ");
+        
+        // Set confirmation flag with action string
+        sessionState.setAwaitingConfirmationFor("delete-component-" + component.getId());
+        
+        return CommandResponse.info(message.toString());
+    }
+    
+    /**
+     * ETAPA 5: Process user selection in deletion flow
+     * Handles type selection, component selection, etc.
+     */
+    public CommandResponse handleDeletionSelection(FormState sessionState, String input) {
+        String deletionStep = sessionState.getData("deletionStep");
+        String deletionContext = sessionState.getData("deletionContext");
+        
+        if ("type-selection".equals(deletionStep)) {
+            return handleTypeSelection(sessionState, input, deletionContext);
+        } else if ("component-selection".equals(deletionStep)) {
+            return handleComponentSelection(sessionState, input);
+        }
+        
+        // Unknown step
+        sessionState.clearDeletionFlowData();
+        return CommandResponse.error("Unknown deletion step. Flow cancelled.");
+    }
+    
+    /**
+     * Handle type selection (root or du-level context)
+     */
+    private CommandResponse handleTypeSelection(FormState sessionState, String input, String context) {
+        String inputLower = input.trim().toLowerCase();
+        String selectedType = null;
+        
+        if ("root".equals(context)) {
+            // Map input to DU type
+            if ("1".equals(inputLower) || "du-online".equals(inputLower)) {
+                selectedType = "du-online";
+            } else if ("2".equals(inputLower) || "du-lib".equals(inputLower)) {
+                selectedType = "du-lib";
+            } else {
+                return CommandResponse.error("Invalid option. Please enter 1, 2, or the type name (du-online, du-lib)");
+            }
+            
+            // Show list of DUs of this type
+            return showDUListForDeletion(sessionState, selectedType);
+            
+        } else if ("du-level".equals(context)) {
+            // Map input to component type or special type
+            if ("1".equals(inputLower) || "dep".equals(inputLower)) {
+                selectedType = "dep";
+            } else if ("2".equals(inputLower) || "dto".equals(inputLower)) {
+                selectedType = "dto";
+            } else if ("3".equals(inputLower) || "job".equals(inputLower)) {
+                selectedType = "job";
+            } else if ("4".equals(inputLower) || "lib".equals(inputLower)) {
+                selectedType = "lib";
+            } else if ("5".equals(inputLower) || "trx".equals(inputLower)) {
+                selectedType = "trx";
+            } else if ("6".equals(inputLower) || "util".equals(inputLower)) {
+                selectedType = "util";
+            } else {
+                return CommandResponse.error("Invalid option. Please enter 1-6 or the type name (dep/dto/job/lib/trx/util)");
+            }
+            
+            String duName = sessionState.getData("deletionDU");
+            
+            // Handle special types (dep, job, util)
+            if ("dep".equals(selectedType)) {
+                return showDependencyListForDeletion(sessionState, duName);
+            } else if ("job".equals(selectedType) || "util".equals(selectedType)) {
+                // JOB and UTIL are strings only for now (Opción A)
+                sessionState.clearDeletionFlowData();
+                return CommandResponse.error("Deletion of " + selectedType.toUpperCase() + " not yet implemented (reserved for future)");
+            }
+            
+            // Handle folder types (dto, lib, trx)
+            return showComponentListForType(sessionState, duName, selectedType);
+        }
+        
+        sessionState.clearDeletionFlowData();
+        return CommandResponse.error("Unknown context");
+    }
+    
+    /**
+     * Handle component selection from list
+     */
+    private CommandResponse handleComponentSelection(FormState sessionState, String input) {
+        String duName = sessionState.getData("deletionDU");
+        String folderName = sessionState.getData("deletionFolder");
+        int componentCount = Integer.parseInt(sessionState.getData("deletionComponentCount"));
+        
+        // Get components list
+        List<DeploymentUnit> components = getComponentsInFolder(duName, folderName);
+        
+        // Parse selection (number or name)
+        DeploymentUnit selectedComponent = null;
+        String inputTrimmed = input.trim();
+        
+        // Try as number first
+        try {
+            int selection = Integer.parseInt(inputTrimmed);
+            if (selection >= 1 && selection <= componentCount) {
+                selectedComponent = components.get(selection - 1);
+            } else {
+                return CommandResponse.error("Invalid selection. Please enter a number between 1 and " + componentCount);
+            }
+        } catch (NumberFormatException e) {
+            // Try as name
+            for (DeploymentUnit component : components) {
+                if (component.getName().equalsIgnoreCase(inputTrimmed)) {
+                    selectedComponent = component;
+                    break;
+                }
+            }
+            if (selectedComponent == null) {
+                return CommandResponse.error("Component '" + inputTrimmed + "' not found. Please enter a valid number or component name.");
+            }
+        }
+        
+        // Clear deletion flow and show confirmation
+        sessionState.clearDeletionFlowData();
+        return showComponentDeletionConfirmation(sessionState, duName, folderName, selectedComponent.getName());
+    }
+    
+    /**
+     * Show list of DUs for deletion (root context)
+     */
+    private CommandResponse showDUListForDeletion(FormState sessionState, String duType) {
+        // TODO ETAPA 5: List DUs by type
+        sessionState.clearDeletionFlowData();
+        return CommandResponse.error("DU listing for deletion not yet implemented");
+    }
+    
+    /**
+     * Show list of dependencies for deletion (du-level context, dep option)
+     */
+    private CommandResponse showDependencyListForDeletion(FormState sessionState, String duName) {
+        // TODO ETAPA 5: List dependencies
+        sessionState.clearDeletionFlowData();
+        return CommandResponse.error("Dependency deletion not yet implemented");
+    }
+    
+    /**
+     * Show list of components by type (dto/lib/trx)
+     */
+    private CommandResponse showComponentListForType(FormState sessionState, String duName, String folderType) {
+        // Redirect to folder context menu
+        sessionState.clearDeletionFlowData();
+        return showFolderContextMenu(sessionState, duName, folderType);
+    }
+    
+    /**
+     * Helper: Get all components in a specific folder
+     */
+    private List<DeploymentUnit> getComponentsInFolder(String duName, String folderName) {
+        DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
+        if (du == null) {
+            return new java.util.ArrayList<>();
+        }
+        
+        // Find the folder by name
+        for (com.bank.education.apxcli.model.ComponentFolder folder : du.getComponentFolders()) {
+            if (folder.getType().name().equalsIgnoreCase(folderName)) {
+                // Return non-deleted components
+                return folder.getContainedUnits().stream()
+                    .filter(unit -> !unit.isDeleted())
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        }
+        
+        return new java.util.ArrayList<>();
+    }
+    
+    /**
+     * Helper: Get all dependencies in a DU
+     */
+    private List<DeploymentUnit> getDependenciesInDU(String duName) {
+        DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
+        if (du == null) {
+            return new java.util.ArrayList<>();
+        }
+        
+        // Return non-deleted dependencies
+        return du.getDependencies().stream()
+            .filter(dep -> !dep.isDeleted())
+            .collect(java.util.stream.Collectors.toList());
     }
     
     /**

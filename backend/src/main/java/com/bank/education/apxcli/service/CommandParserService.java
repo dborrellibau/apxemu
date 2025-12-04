@@ -76,6 +76,11 @@ public class CommandParserService {
             return handleConfirmation(sessionState, originalInput);
         }
         
+        // Check if user is in deletion flow
+        if (sessionState.isAwaitingDeletionSelection()) {
+            return deletionCommandService.handleDeletionSelection(sessionState, originalInput);
+        }
+        
         // Check if user is waiting for component selection after apx add
         if (sessionState.isAwaitingComponentSelection()) {
             return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
