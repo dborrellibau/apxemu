@@ -31,6 +31,9 @@ public class ContainableDto {
     // For ComponentFolder specific fields
     private ComponentFolder.FolderType folderType;
     
+    // Soft delete flag
+    private boolean deleted;
+    
     // Dependencies (only for DeploymentUnit)
     private List<String> dependencyNames;
     
@@ -57,6 +60,7 @@ public class ContainableDto {
             dto.setUuaa(du.getUuaa());
             dto.setCode(du.getCode());
             dto.setClassName(du.getClassName());
+            dto.setDeleted(du.isDeleted()); // ETAPA 8: Set deleted flag
             
             // Add dependency names ONLY for SIMPLE_OBJECT DeploymentUnits (actual components)
             // Container DeploymentUnits (DU_ONLINE, DU_LIB) should NOT have dependency lines
@@ -76,6 +80,7 @@ public class ContainableDto {
             dto.setEntityType("ComponentFolder");
             dto.setDescription(folder.getDescription());
             dto.setFolderType(folder.getType());
+            dto.setDeleted(false); // ETAPA 8: Folders are never deleted
             // ComponentFolders NEVER have dependencies - do NOT set dependencyNames
         }
         
@@ -126,6 +131,9 @@ public class ContainableDto {
     
     public ComponentFolder.FolderType getFolderType() { return folderType; }
     public void setFolderType(ComponentFolder.FolderType folderType) { this.folderType = folderType; }
+    
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
     
     public List<String> getDependencyNames() { return dependencyNames; }
     public void setDependencyNames(List<String> dependencyNames) { this.dependencyNames = dependencyNames; }

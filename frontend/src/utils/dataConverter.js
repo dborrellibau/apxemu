@@ -11,6 +11,11 @@ export const convertToReactFlow = (hierarchicalData) => {
   let nodeId = 1;
   
   const processContainer = (container, parentId = null, level = 0) => {
+    // ETAPA 8: Skip deleted components
+    if (container.deleted === true) {
+      return null; // Don't process deleted containers
+    }
+    
     const currentNodeId = `node-${nodeId++}`;
     
     // Create node
@@ -64,6 +69,7 @@ export const convertToReactFlow = (hierarchicalData) => {
     if (container.children && container.children.length > 0) {
       container.children.forEach(child => {
         processContainer(child, currentNodeId, level + 1);
+        // Note: deleted children will be filtered out automatically in processContainer
       });
     }
     
@@ -77,6 +83,11 @@ export const convertToReactFlow = (hierarchicalData) => {
   
   // Process dependencies - second pass to create dependency edges
   const processDependencies = (container) => {
+    // ETAPA 8: Skip deleted components in dependency processing
+    if (container.deleted === true) {
+      return;
+    }
+    
     if (container.dependencyNames && container.dependencyNames.length > 0) {
       // Find the source node by name (unique identifier) instead of id
       // Important: We use name because ids can collide between DeploymentUnits and ComponentFolders
