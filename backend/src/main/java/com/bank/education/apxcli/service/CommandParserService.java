@@ -31,6 +31,7 @@ public class CommandParserService {
     private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitNavigationService directoryNavigationService;
     private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
+    private final com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
@@ -41,7 +42,8 @@ public class CommandParserService {
                                SystemCommandService systemCommandService,
                                ArchitectureOrchestrationService architectureService,
                                DeploymentUnitNavigationService directoryNavigationService,
-                               com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService) {
+                               com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService,
+                               com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService) {
         this.navigationService = navigationService;
         this.componentSelectionService = componentSelectionService;
         this.formInputService = formInputService;
@@ -50,6 +52,7 @@ public class CommandParserService {
         this.architectureService = architectureService;
         this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
+        this.deletionCommandService = deletionCommandService;
         
         // Share activeSessions with form services
         this.componentSelectionService.setActiveSessions(activeSessions);
@@ -279,8 +282,7 @@ public class CommandParserService {
         if ("y".equals(inputLower) || input.trim().isEmpty()) {
             // Dispatch to appropriate service based on action prefix
             if (action.startsWith("delete-")) {
-                // Future: return deletionCommandService.executeConfirmedDelete(action);
-                return CommandResponse.error("Deletion service not yet implemented");
+                return deletionCommandService.executeConfirmedDelete(action);
             }
             // Future extension points for other confirmations:
             // if (action.startsWith("override-")) return formInputService.executeOverride(action);
