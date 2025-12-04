@@ -194,7 +194,7 @@ public class CommandParserService {
             case "dep":
                 return handleDepCommand(subArgs);
             case "show":
-                return infoCommandService.handleShowCommand(subArgs);
+                return infoCommandService.handleShowCommand(subArgs, sessionState);
             case "debug-du":
                 return infoCommandService.handleDebugDuCommand(subArgs);
             case "reset":
