@@ -96,10 +96,11 @@ public class InfoCommandService {
     
     /**
      * Handle show at level 3 - component inside folder
-     * ETAPA 1: Returns placeholder message
+     * ETAPA 3: Shows component details with dependencies
      */
     private CommandResponse handleShowAtLevel3(String componentName) {
-        return CommandResponse.info("[ETAPA 1] Show at level 3 for: " + componentName + " (not implemented yet)");
+        String details = containableInfoService.getComponentDetailsForShow(componentName);
+        return CommandResponse.info(details);
     }
     
     public CommandResponse handleDebugDuCommand(String[] args) {

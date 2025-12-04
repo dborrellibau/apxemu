@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Service responsible for providing information and debug details about Containable objects
@@ -381,6 +382,58 @@ public class ContainableInfoService {
                     String componentConnector = isLastComponent ? "╰─ " : "├─ ";
                     output.append(indent).append(componentConnector).append(components.get(j).getName()).append("\n");
                 }
+            }
+        }
+        
+        return output.toString();
+    }
+
+    /**
+     * Get formatted details for a component for 'apx show' command
+     * Returns component info with dependencies list
+     * 
+     * @param componentName The component name
+     * @return Formatted string with component details and dependencies
+     */
+    @Transactional(readOnly = true)
+    public String getComponentDetailsForShow(String componentName) {
+        Optional<DeploymentUnit> componentOpt = repository.findByName(componentName);
+        
+        if (!componentOpt.isPresent()) {
+            return "Component '" + componentName + "' not found";
+        }
+        
+        DeploymentUnit component = componentOpt.get();
+        StringBuilder output = new StringBuilder();
+        
+        // Map type to lowercase format
+        String typeStr = component.getType().toString().toLowerCase();
+        if (typeStr.startsWith("du_")) {
+            typeStr = typeStr.substring(3); // Remove "du_" prefix
+        }
+        typeStr = typeStr.replace("_", "-"); // lib_impl -> lib-impl
+        
+        // Header with artifact type
+        output.append("Artifact(").append(typeStr).append(")\n");
+        output.append("- Artifact: ").append(component.getName()).append("\n");
+        output.append("- Description: ").append(component.getDescription() != null ? component.getDescription() : "No description").append("\n");
+        output.append("- Application(UUAA): ").append(component.getUuaa() != null ? component.getUuaa() : "N/A").append("\n\n");
+        
+        // Dependencies section - force initialization within transaction
+        Set<DeploymentUnit> allDeps = component.getDependencies();
+        List<DeploymentUnit> dependencies = new ArrayList<>();
+        for (DeploymentUnit dep : allDeps) {
+            // Trigger proxy initialization
+            dep.getName();
+            if (!dep.isDeleted()) {
+                dependencies.add(dep);
+            }
+        }
+        
+        output.append("Dependencies: ").append(dependencies.size()).append("\n");
+        if (!dependencies.isEmpty()) {
+            for (DeploymentUnit dep : dependencies) {
+                output.append("- ").append(dep.getName()).append("\n");
             }
         }
         
