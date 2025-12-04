@@ -152,6 +152,7 @@ public class CommandParserService {
         // Legacy support - suggest using apx prefix
         else if ("help".equals(command) || "init".equals(command) || "add".equals(command) || 
                  "list".equals(command) || "dep".equals(command) || "show".equals(command) ||
+                 "del".equals(command) || "delete".equals(command) ||
                  "debug-du".equals(command) || "reset".equals(command) || "reset-all".equals(command) ||
                  "debug".equals(command) || "test".equals(command)) {
             response = CommandResponse.error("Command '" + command + "' requires 'apx' prefix. Use: apx " + command + 
@@ -185,6 +186,9 @@ public class CommandParserService {
                 }
                 // Otherwise, normal "apx add" for components
                 return handleAddCommand(sessionId, sessionState, subArgs);
+            case "del":
+                // ETAPA 7: Handle "apx del" deletion command
+                return deletionCommandService.handleDeleteCommand(sessionState);
             case "list":
                 return infoCommandService.handleListCommand(subArgs);
             case "dep":
@@ -318,6 +322,7 @@ public class CommandParserService {
             "apx init                 - Show interactive banking component menu",
             "apx add                  - Add component in current directory",
             "apx add dep              - Create dependency (interactive flow)",
+            "apx del                  - Delete component (context-aware)",
             "apx list [type]          - List deployment units",
             "apx show <name>          - Show details of a deployment unit", 
             "apx help                 - Show this help message",
@@ -331,6 +336,7 @@ public class CommandParserService {
             "=== APX Examples ===",
             "apx init                 - Start interactive component creation",
             "apx add dep              - Create dependency (guided workflow)",
+            "apx del                  - Delete component (menu varies by location)",
             "apx list du-online       - List online deployment units",
             "apx show customer-service - Show DU details"
         );
