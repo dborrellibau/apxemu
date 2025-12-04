@@ -193,9 +193,13 @@ public class ContainableInfoService {
             return CommandResponse.info("Folder '" + folderName + "' is empty in " + duName);
         }
         
+        // ETAPA 9: Add [DELETED] marker to deleted components
         List<String> componentList = new ArrayList<>();
         for (DeploymentUnit component : folder.getContainedUnits()) {
-            componentList.add(component.getName() + " (" + component.getType() + ")");
+            String name = component.getName();
+            String type = " (" + component.getType() + ")";
+            String deletedMarker = component.isDeleted() ? " \u001B[31m[DELETED]\u001B[0m" : "";
+            componentList.add(name + type + deletedMarker);
         }
             
         return new CommandResponse(
