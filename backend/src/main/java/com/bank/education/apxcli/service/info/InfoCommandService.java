@@ -3,6 +3,7 @@ package com.bank.education.apxcli.service.info;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
+import com.bank.education.apxcli.service.ContainableInfoService;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -14,9 +15,14 @@ import java.util.Map;
 public class InfoCommandService {
     
     private final ArchitectureOrchestrationService architectureService;
+    private final ContainableInfoService containableInfoService;
     
-    public InfoCommandService(ArchitectureOrchestrationService architectureService) {
+    public InfoCommandService(
+        ArchitectureOrchestrationService architectureService,
+        ContainableInfoService containableInfoService
+    ) {
         this.architectureService = architectureService;
+        this.containableInfoService = containableInfoService;
     }
     
     public CommandResponse handleListCommand(String[] args) {
@@ -81,10 +87,11 @@ public class InfoCommandService {
     
     /**
      * Handle show at level 1 - DU or standalone component
-     * ETAPA 1: Returns placeholder message
+     * ETAPA 2: Shows full DU tree with folders and components
      */
     private CommandResponse handleShowAtLevel1(String name) {
-        return CommandResponse.info("[ETAPA 1] Show at level 1 for: " + name + " (not implemented yet)");
+        String details = containableInfoService.getDeploymentUnitDetailsForShow(name);
+        return CommandResponse.info(details);
     }
     
     /**

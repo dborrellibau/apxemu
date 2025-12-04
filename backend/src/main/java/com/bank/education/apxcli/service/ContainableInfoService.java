@@ -304,4 +304,86 @@ public class ContainableInfoService {
         
         return allComponents;
     }
+
+    /**
+     * Get formatted details for a deployment unit for 'apx show' command
+     * Returns tree structure with folders and components
+     * 
+     * @param duName The deployment unit name
+     * @return Formatted string with DU details and component tree
+     */
+    @Transactional(readOnly = true)
+    public String getDeploymentUnitDetailsForShow(String duName) {
+        Optional<DeploymentUnit> duOpt = repository.findByName(duName);
+        if (!duOpt.isPresent()) {
+            return "Deployment unit '" + duName + "' not found";
+        }
+        
+        DeploymentUnit du = duOpt.get();
+        StringBuilder output = new StringBuilder();
+        
+        // Header with artifact type
+        String artifactType = du.getType().toString().toLowerCase().replace("du_", "du-");
+        output.append("Artifact(").append(artifactType).append(")\n");
+        output.append("- Artifact: ").append(du.getName()).append("\n");
+        output.append("- Description: ").append(du.getDescription() != null ? du.getDescription() : "No description").append("\n");
+        output.append("- Application(UUAA): ").append(du.getUuaa() != null ? du.getUuaa() : "N/A").append("\n\n");
+        
+        // Components section with tree
+        output.append("Artifacts:\n");
+        output.append("-----------\n");
+        
+        // Ensure folders are shown in order: dto, library, transactions
+        String[] folderOrder = {"dto", "library", "transactions"};
+        List<ComponentFolder> folders = new ArrayList<>();
+        
+        for (String folderName : folderOrder) {
+            Optional<ComponentFolder> folderOpt = du.getComponentFolders().stream()
+                .filter(f -> folderName.equals(f.getType().toString().toLowerCase()))
+                .findFirst();
+            
+            if (folderOpt.isPresent()) {
+                folders.add(folderOpt.get());
+            } else {
+                // Create virtual empty folder for display
+                folders.add(null);
+            }
+        }
+        
+        // Build tree
+        for (int i = 0; i < folders.size(); i++) {
+            boolean isLast = (i == folders.size() - 1);
+            String folderName = folderOrder[i];
+            ComponentFolder folder = folders.get(i);
+            
+            // Count non-deleted components
+            int count = 0;
+            List<DeploymentUnit> components = new ArrayList<>();
+            if (folder != null) {
+                for (DeploymentUnit component : folder.getContainedUnits()) {
+                    if (!component.isDeleted()) {
+                        count++;
+                        components.add(component);
+                    }
+                }
+            }
+            
+            // Folder line
+            String connector = isLast ? "╰─ " : "├─ ";
+            output.append(connector).append(duName).append("\\").append(folderName).append(": ").append(count).append("\n");
+            
+            // Components under folder
+            if (!components.isEmpty()) {
+                String indent = isLast ? "   " : "│  ";
+                
+                for (int j = 0; j < components.size(); j++) {
+                    boolean isLastComponent = (j == components.size() - 1);
+                    String componentConnector = isLastComponent ? "╰─ " : "├─ ";
+                    output.append(indent).append(componentConnector).append(components.get(j).getName()).append("\n");
+                }
+            }
+        }
+        
+        return output.toString();
+    }
 }
