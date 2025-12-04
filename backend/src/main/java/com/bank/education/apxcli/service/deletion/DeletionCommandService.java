@@ -391,10 +391,52 @@ public class DeletionCommandService {
     }
     
     /**
-     * Placeholder for future ETAPA 6 - actual deletion execution
+     * ETAPA 6: Execute confirmed deletion (soft delete)
+     * Action format: "delete-component-123" where 123 is the component ID
      */
     public CommandResponse executeConfirmedDelete(String action) {
         // Parse action string like "delete-component-123"
-        return CommandResponse.error("Deletion execution not yet implemented. Action: " + action);
+        if (!action.startsWith("delete-component-")) {
+            return CommandResponse.error("Invalid deletion action format: " + action);
+        }
+        
+        String idStr = action.substring("delete-component-".length());
+        Long componentId;
+        try {
+            componentId = Long.parseLong(idStr);
+        } catch (NumberFormatException e) {
+            return CommandResponse.error("Invalid component ID in action: " + action);
+        }
+        
+        // Find the component
+        DeploymentUnit component = deploymentUnitRepository.findById(componentId).orElse(null);
+        if (component == null) {
+            return CommandResponse.error("Component with ID " + componentId + " not found");
+        }
+        
+        // Check if already deleted
+        if (component.isDeleted()) {
+            return CommandResponse.error("Component '" + component.getName() + "' is already marked as deleted");
+        }
+        
+        // Perform soft delete
+        String componentName = component.getName();
+        String componentType = component.getType().getValue();
+        component.setDeleted(true);
+        deploymentUnitRepository.save(component);
+        
+        // Build success message
+        StringBuilder message = new StringBuilder();
+        message.append("✓ Component successfully marked as deleted\n");
+        message.append("\n");
+        message.append("Component: ").append(componentName).append("\n");
+        message.append("Type: ").append(componentType).append("\n");
+        message.append("\n");
+        message.append("\u001B[33mNOTE: The component has been soft-deleted (marked as inactive).\n");
+        message.append("It will be filtered from the architecture diagram.\n");
+        message.append("If this component is referenced as a dependency elsewhere,\n");
+        message.append("remember to remove those dependencies manually.\u001B[0m");
+        
+        return CommandResponse.success(message.toString());
     }
 }
