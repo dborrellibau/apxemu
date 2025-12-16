@@ -58,15 +58,15 @@ public class FormBuilder {
     private String getCodePrompt(String type) {
         switch (type.toLowerCase()) {
             case "dto":
-                return "Enter DTO Code - 3 digits (001-999):";
+                return "Enter DTO Code - 3 digits (000-999):";
             case "lib":
-                return "Enter Library Code - 3 digits (001-999):";
+                return "Enter Library Code - 3 digits (000-999):";
             case "trx":
-                return "Enter Transaction Code - 3 digits (001-999):";
+                return "Enter Transaction Code - 3 digits (000-999):";
             case "du-lib":
-                return "Enter Library Container Code - 3 digits (001-999):";
+                return "Enter Library Container Code - 3 digits (000-999):";
             default:
-                return "Enter Code - 3 digits (001-999):";
+                return "Enter Code - 3 digits (000-999):";
         }
     }
     
