@@ -14,7 +14,7 @@ const Terminal = ({ wsService, isConnected }) => {
     // Add welcome message
     setHistory([
       { type: 'info', content: 'Welcome to V-Ether' },
-      { type: 'info', content: 'Type "help" for available commands' },
+      { type: 'info', content: 'Type "apx help" for available commands' },
       { type: 'prompt', content: '' }
     ]);
   }, []);

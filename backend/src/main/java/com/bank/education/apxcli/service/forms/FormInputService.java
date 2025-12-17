@@ -124,7 +124,7 @@ public class FormInputService {
                 break;
             case CODE:
                 if (!trimmed.matches("^\\d{3}$")) {
-                    return CommandResponse.error("Code must be exactly 3 digits (001-999). Try again:");
+                    return CommandResponse.error("Code must be exactly 3 digits (000-999). Try again:");
                 }
                 // Check for unique code by type
                 if (architectureService.containableExists(trimmed, formType)) {
