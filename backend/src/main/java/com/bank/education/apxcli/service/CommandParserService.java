@@ -6,6 +6,7 @@ import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.service.forms.ComponentSelectionService;
 import com.bank.education.apxcli.service.forms.FormInputService;
+import com.bank.education.apxcli.service.forms.FormProcessingService;
 import com.bank.education.apxcli.service.info.InfoCommandService;
 import com.bank.education.apxcli.service.navigation.NavigationCommandService;
 import com.bank.education.apxcli.service.system.SystemCommandService;
@@ -26,6 +27,7 @@ public class CommandParserService {
     private final NavigationCommandService navigationService;
     private final ComponentSelectionService componentSelectionService;
     private final FormInputService formInputService;
+    private final FormProcessingService formProcessingService;
     private final InfoCommandService infoCommandService;
     private final SystemCommandService systemCommandService;
     private final ArchitectureOrchestrationService architectureService;
@@ -38,6 +40,7 @@ public class CommandParserService {
     public CommandParserService(NavigationCommandService navigationService,
                                ComponentSelectionService componentSelectionService,
                                FormInputService formInputService,
+                               FormProcessingService formProcessingService,
                                InfoCommandService infoCommandService,
                                SystemCommandService systemCommandService,
                                ArchitectureOrchestrationService architectureService,
@@ -47,6 +50,7 @@ public class CommandParserService {
         this.navigationService = navigationService;
         this.componentSelectionService = componentSelectionService;
         this.formInputService = formInputService;
+        this.formProcessingService = formProcessingService;
         this.infoCommandService = infoCommandService;
         this.systemCommandService = systemCommandService;
         this.architectureService = architectureService;
@@ -284,7 +288,9 @@ public class CommandParserService {
         
         // Check for explicit cancellation
         if ("n".equals(inputLower)) {
-            return CommandResponse.success("Operación cancelada");
+            // Clean up any pending data
+            cleanupPendingConfirmationData(sessionState);
+            return CommandResponse.success("Operation cancelled");
         }
         
         // Accept confirmation: Y, y, or Enter (empty)
@@ -293,16 +299,40 @@ public class CommandParserService {
             if (action.startsWith("delete-")) {
                 return deletionCommandService.executeConfirmedDelete(action);
             }
-            // Future extension points for other confirmations:
-            // if (action.startsWith("override-")) return formInputService.executeOverride(action);
-            // if (action.startsWith("clear-")) return dependencyCommandService.executeClear(action);
+            if (action.startsWith("create-component-")) {
+                return formProcessingService.executeConfirmedCreate(action, sessionState);
+            }
+            if (action.startsWith("create-dep-")) {
+                return dependencyCommandService.executeConfirmedDependencyCreate(action, sessionState);
+            }
             
-            return CommandResponse.error("Acción desconocida: " + action);
+            return CommandResponse.error("Unknown action: " + action);
         }
         
         // Invalid response - re-prompt
         sessionState.setAwaitingConfirmationFor(action); // Restore flag
-        return CommandResponse.error("Respuesta inválida. Ingrese Y para confirmar, n para cancelar, o presione Enter para confirmar.");
+        return CommandResponse.error("Invalid response. Enter Y to confirm, n to cancel, or press Enter to confirm.");
+    }
+    
+    /**
+     * Cleans up temporary data stored during confirmation flow
+     */
+    private void cleanupPendingConfirmationData(FormState sessionState) {
+        // Clean up pending create data (from apx init/add)
+        sessionState.getFormData().remove("pendingCreate_formType");
+        sessionState.getFormData().remove("pendingCreate_uuaa");
+        sessionState.getFormData().remove("pendingCreate_code");
+        sessionState.getFormData().remove("pendingCreate_className");
+        sessionState.getFormData().remove("pendingCreate_version");
+        sessionState.getFormData().remove("pendingCreate_country");
+        sessionState.getFormData().remove("pendingCreate_description");
+        sessionState.getFormData().remove("pendingCreate_deploymentUnit");
+        sessionState.getFormData().remove("pendingCreate_duName");
+        sessionState.getFormData().remove("pendingCreate_currentDir");
+        
+        // Clean up pending dependency data (from apx add dep)
+        sessionState.getFormData().remove("pendingDep_source");
+        sessionState.getFormData().remove("pendingDep_target");
     }
     
     private CommandResponse showHelp() {
