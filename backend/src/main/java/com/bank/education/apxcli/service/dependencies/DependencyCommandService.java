@@ -6,6 +6,7 @@ import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.validation.ArtifactIdValidationService;
+import com.bank.education.apxcli.util.ConfirmationMessages;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -228,7 +229,7 @@ public class DependencyCommandService {
     }
     
     /**
-     * Handles user input of artifact ID and creates the dependency
+     * Handles user input of artifact ID - now shows confirmation before creating
      */
     public CommandResponse handleArtifactIdInput(FormState sessionState, String artifactId) {
         String sourceComponent = sessionState.getData("depSourceComponent");
@@ -255,14 +256,38 @@ public class DependencyCommandService {
             return CommandResponse.error("LIB_IMPL components cannot be used as dependency targets. Use the base LIB instead.");
         }
         
-        // All specific validations passed - delegate to DependencyManagementService
-        // (it will handle existence checks, duplicates, and circular dependency validation)
-        CommandResponse response = dependencyManagementService.createDependency(sourceComponent, artifactId);
+        // Store pending dependency data for confirmation
+        sessionState.addData("pendingDep_source", sourceComponent);
+        sessionState.addData("pendingDep_target", artifactId);
         
-        // Clear dependency flow data regardless of success/failure
+        // Set confirmation flag
+        sessionState.setAwaitingConfirmationFor("create-dep-" + sourceComponent + "-" + artifactId);
+        
+        // Return confirmation prompt
+        return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
+    }
+    
+    /**
+     * Execute confirmed dependency creation after user confirms
+     * @param action the action string from confirmation
+     * @param sessionState session state containing pending data
+     * @return result of create operation
+     */
+    public CommandResponse executeConfirmedDependencyCreate(String action, FormState sessionState) {
+        String sourceComponent = sessionState.getData("pendingDep_source");
+        String targetArtifactId = sessionState.getData("pendingDep_target");
+        
+        // Clear all dependency flow data
         sessionState.clearDependencyFlowData();
+        sessionState.getFormData().remove("pendingDep_source");
+        sessionState.getFormData().remove("pendingDep_target");
         
-        return response;
+        if (sourceComponent == null || targetArtifactId == null) {
+            return CommandResponse.error("Session error: missing dependency data");
+        }
+        
+        // Create the dependency
+        return dependencyManagementService.createDependency(sourceComponent, targetArtifactId);
     }
     
     /**

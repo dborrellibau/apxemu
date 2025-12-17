@@ -58,13 +58,27 @@ public class FormInputService {
             // Save current directory before clearing session
             String currentDirectory = formState.getCurrentDirectory();
             
-            // Process the completed form
-            CommandResponse result = formProcessingService.processCompleteForm(sessionId, formState);
+            // Process the completed form - now returns confirmation prompt
+            CommandResponse result = formProcessingService.processCompleteForm(sessionId, formState, sessionState);
             
-            // Clear the form but recreate session state to preserve directory navigation
+            // Clear the active form session (user is no longer in form mode)
             activeSessions.remove(sessionId);
+            
+            // Recreate session state to preserve directory navigation
             FormState newSessionState = new FormState();
             newSessionState.setCurrentDirectory(currentDirectory);
+            
+            // Copy confirmation flag if it was set (for continuation)
+            if (sessionState.getAwaitingConfirmationFor() != null) {
+                newSessionState.setAwaitingConfirmationFor(sessionState.getAwaitingConfirmationFor());
+                // Copy pending data as well
+                for (String key : sessionState.getFormData().keySet()) {
+                    if (key.startsWith("pendingCreate_")) {
+                        newSessionState.addData(key, sessionState.getData(key));
+                    }
+                }
+            }
+            
             activeSessions.put(sessionId, newSessionState);
             
             result.setPrompt(newSessionState.getCurrentPrompt());

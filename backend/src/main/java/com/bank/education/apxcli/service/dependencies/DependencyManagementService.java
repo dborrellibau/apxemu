@@ -29,6 +29,7 @@ public class DependencyManagementService {
     
     /**
      * Creates a dependency between two deployment units
+     * Note: Circular dependency validation has been removed as per requirements
      */
     public CommandResponse createDependency(String sourceName, String targetName) {
         Optional<DeploymentUnit> sourceOpt = repository.findByName(sourceName);
@@ -47,11 +48,6 @@ public class DependencyManagementService {
         
         if (source.getDependencies().contains(target)) {
             return CommandResponse.error("Dependency already exists between '" + sourceName + "' and '" + targetName + "'");
-        }
-        
-        // Check for circular dependencies
-        if (wouldCreateCircularDependency(source, target)) {
-            return CommandResponse.error("Cannot create dependency: would create circular dependency");
         }
         
         source.addDependency(target);

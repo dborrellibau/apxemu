@@ -93,7 +93,8 @@ const Terminal = ({ wsService, isConnected }) => {
   };
 
   const executeCommand = (command) => {
-    if (!command.trim()) return;
+    // Allow empty commands (for Y/n confirmations where Enter = Yes)
+    // if (!command.trim()) return;
 
     // Always add the command to the display history first
     setHistory(prev => [
