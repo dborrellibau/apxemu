@@ -49,8 +49,9 @@ public class FormValidationService {
     }
     
     private CommandResponse validateUUAA(String input) {
-        if (!input.matches("^[A-Z]{4}$")) {
-            return CommandResponse.error("UUAA must be exactly 4 uppercase letters. Try again:");
+        String upper = input.toUpperCase();
+        if (!upper.matches("^[A-Z]{4}$")) {
+            return CommandResponse.error("UUAA must be exactly 4 letters (A-Z). Try again:");
         }
         return CommandResponse.success("Valid input");
     }

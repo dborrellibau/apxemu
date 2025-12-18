@@ -28,7 +28,7 @@ public class DuOnlineStrategy extends ContainerDeploymentUnitStrategy {
     @Override
     public List<String> getFormPrompts() {
         return Arrays.asList(
-            "Enter Application (UUAA) - 4 uppercase letters:",
+            "Enter Application (UUAA) - 4 letters (A-Z):",
             "Enter Deployment Unit name (no spaces):",
             "Enter Description:"
         );

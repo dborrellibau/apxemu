@@ -55,8 +55,8 @@ public abstract class SimpleDeploymentUnitStrategy implements DeploymentUnitStra
     @Override
     public List<String> getFormPrompts() {
         return Arrays.asList(
-            "Enter Application (UUAA) - 4 uppercase letters:",
-            "Enter Code - 3 digits (001-999):",
+            "Enter Application (UUAA) - 4 letters (A-Z):",
+            "Enter Code - 3 digits (000-999):",
             "Enter Description:"
         );
     }

@@ -48,9 +48,18 @@ public class FormInputService {
             return validation;
         }
         
-        // Store the input
         String fieldName = getFieldNameForStep(formType, step);
-        formState.addData(fieldName, input.trim());
+
+        // Normalización por tipo de campo (UUAA siempre se guarda en mayúsculas)
+        List<FormField> fields = getFormFields(formType);
+        FormField currentField = fields.get(step);
+        
+        String valueToStore = input.trim();
+        if (currentField.getType() == FieldType.UUAA) {
+            valueToStore = valueToStore.toUpperCase();
+        }
+        
+        formState.addData(fieldName, valueToStore);
         formState.nextStep();
         
         // Check if form is complete
@@ -132,8 +141,9 @@ public class FormInputService {
         
         switch (field.getType()) {
             case UUAA:
-                if (!trimmed.matches("^[A-Z]{4}$")) {
-                    return CommandResponse.error("UUAA must be exactly 4 uppercase letters. Try again:");
+                String upper = trimmed.toUpperCase();
+                if (!upper.matches("^[A-Z]{4}$")) {
+                    return CommandResponse.error("UUAA must be exactly 4 letters (A-Z). Try again:");
                 }
                 break;
             case CODE:

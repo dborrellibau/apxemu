@@ -21,7 +21,7 @@ public class FormBuilder {
     }
     
     public FormBuilder addUUAA() {
-        return addField("uuaa", "Enter Application (UUAA) - 4 uppercase letters:", FormField.FieldType.UUAA);
+        return addField("uuaa", "Enter Application (UUAA) - 4 letters (A-Z):", FormField.FieldType.UUAA);
     }
     
     public FormBuilder addCode(String type) {
