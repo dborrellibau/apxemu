@@ -47,6 +47,19 @@ public class FormValidationService {
                 return CommandResponse.success("Valid input");
         }
     }
+
+    public String normalizeInput(FormField field, String input) {
+        if (input == null) return null;
+    
+        String trimmed = input.trim();
+    
+        switch (field.getType()) {
+            case UUAA:
+                return trimmed.toUpperCase();
+            default:
+                return trimmed;
+        }
+    }
     
     private CommandResponse validateUUAA(String input) {
         String upper = input.toUpperCase();
