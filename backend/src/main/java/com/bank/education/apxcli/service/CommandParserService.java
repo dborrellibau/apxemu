@@ -4,6 +4,10 @@ import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
+import com.bank.education.apxcli.navigation.model.PathType;
+import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
 import com.bank.education.apxcli.service.forms.ComponentSelectionService;
 import com.bank.education.apxcli.service.forms.FormInputService;
 import com.bank.education.apxcli.service.forms.FormProcessingService;
@@ -34,6 +38,8 @@ public class CommandParserService {
     private final DeploymentUnitNavigationService directoryNavigationService;
     private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
     private final com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService;
+    private final PathNavigationService pathNavigationService;
+    private final CommandPermissionService permissionService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
@@ -46,7 +52,9 @@ public class CommandParserService {
                                ArchitectureOrchestrationService architectureService,
                                DeploymentUnitNavigationService directoryNavigationService,
                                com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService,
-                               com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService) {
+                               com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService,
+                               PathNavigationService pathNavigationService,
+                               CommandPermissionService permissionService) {
         this.navigationService = navigationService;
         this.componentSelectionService = componentSelectionService;
         this.formInputService = formInputService;
@@ -57,6 +65,8 @@ public class CommandParserService {
         this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
         this.deletionCommandService = deletionCommandService;
+        this.pathNavigationService = pathNavigationService;
+        this.permissionService = permissionService;
         
         // Share activeSessions with form services
         this.componentSelectionService.setActiveSessions(activeSessions);
@@ -182,16 +192,30 @@ public class CommandParserService {
             case "help":
                 return showHelp();
             case "init":
+                // Validar permisos: apx init solo permitido en ROOT
+                PathType currentType = getCurrentPathType(sessionState.getCurrentDirectory());
+                if (!permissionService.canCreateDeploymentUnit(currentType)) {
+                    return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
+                }
                 return systemCommandService.handleInitCommand(subArgs);
             case "add":
                 // Check if it's "apx add dep" (ETAPA 9 - new functionality)
                 if (subArgs.length > 0 && "dep".equalsIgnoreCase(subArgs[0])) {
+                    // Validar permisos: apx add dep solo permitido en componentes
+                    PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
+                    if (!permissionService.canCreateDependency(currentTypeForDep)) {
+                        return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                    }
                     return dependencyCommandService.handleAddDepCommand(sessionState);
                 }
                 // Otherwise, normal "apx add" for components
                 return handleAddCommand(sessionId, sessionState, subArgs);
             case "del":
-                // ETAPA 7: Handle "apx del" deletion command
+                // Validar permisos: apx del no permitido en ROOT
+                PathType currentTypeForDel = getCurrentPathType(sessionState.getCurrentDirectory());
+                if (!permissionService.canDelete(currentTypeForDel)) {
+                    return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
+                }
                 return deletionCommandService.handleDeleteCommand(sessionState);
             case "list":
                 return infoCommandService.handleListCommand(subArgs);
@@ -217,19 +241,27 @@ public class CommandParserService {
     private CommandResponse handleAddCommand(String sessionId, FormState sessionState, String[] args) {
         String currentDir = sessionState.getCurrentDirectory();
         
-        // Block apx add in root directory
-        if ("root".equals(currentDir)) {
-            return CommandResponse.error("Cannot use 'apx add' in root directory. Navigate to a deployment unit first using 'cd <du-name>'");
+        // Obtener PathType actual usando PathNavigationService
+        PathType currentType = getCurrentPathType(currentDir);
+        
+        // Validar permisos usando CommandPermissionService
+        if (!permissionService.canCreateComponent(currentType)) {
+            return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
         }
         
-        String[] pathParts = currentDir.split("/");
+        String duName;
         
-        // Block apx add in folders (level 2) - only allowed at DU level (level 1)
-        if (pathParts.length > 1) {
-            return CommandResponse.error("Cannot use 'apx add' here. Navigate to the deployment unit level to add components.");
+        // Determinar duName según el nivel
+        if (currentType == PathType.DU_LIB || currentType == PathType.DU_ONLINE) {
+            // Nivel 1: estamos en un DU
+            duName = currentDir;
+        } else if (currentType == PathType.FOLDER) {
+            // Nivel 2: estamos en una carpeta
+            String[] pathParts = currentDir.split("/");
+            duName = pathParts[0];
+        } else {
+            return CommandResponse.error("Cannot use 'apx add' in current location");
         }
-        
-        String duName = pathParts[0];
         
         // Verify the DU exists
         if (!architectureService.deploymentUnitExists(duName)) {
@@ -372,5 +404,18 @@ public class CommandParserService {
         );
         
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
+    }
+    
+    /**
+     * Helper method to get PathType from currentDirectory string.
+     * Converts legacy string format to PathType for permission validation.
+     */
+    private PathType getCurrentPathType(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return PathType.ROOT;
+        }
+        
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        return path != null ? path.getType() : PathType.ROOT;
     }
 }
