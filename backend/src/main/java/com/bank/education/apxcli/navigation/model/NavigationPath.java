@@ -22,9 +22,9 @@ public final class NavigationPath {
     private final PathType parentType;
     
     /**
-     * Constructor - package private, use builder or factory methods
+     * Constructor
      */
-    NavigationPath(List<String> segments, PathType type, PathType parentType) {
+    public NavigationPath(List<String> segments, PathType type, PathType parentType) {
         this.segments = Collections.unmodifiableList(new ArrayList<>(segments));
         this.level = segments.size();
         this.type = Objects.requireNonNull(type, "PathType cannot be null");
