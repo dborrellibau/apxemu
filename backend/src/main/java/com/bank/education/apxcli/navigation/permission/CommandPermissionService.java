@@ -28,14 +28,6 @@ public class CommandPermissionService {
     }
 
     /**
-     * Valida si se puede crear una carpeta desde la posición actual
-     * Solo permitido en DU_ONLINE
-     */
-    public boolean canCreateFolder(PathType currentType) {
-        return currentType == PathType.DU_ONLINE;
-    }
-
-    /**
      * Valida si se puede eliminar la entidad actual
      * No permitido en ROOT
      */
