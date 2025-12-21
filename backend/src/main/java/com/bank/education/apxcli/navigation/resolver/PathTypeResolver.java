@@ -124,11 +124,11 @@ public class PathTypeResolver {
 
     /**
      * Valida si el nombre corresponde a una carpeta válida
-     * Carpetas permitidas: dto, lib, transactions
+     * Carpetas permitidas: dto, library, transactions
      */
     private boolean isValidFolder(String folderName) {
         return "dto".equalsIgnoreCase(folderName) ||
-               "lib".equalsIgnoreCase(folderName) ||
+               "library".equalsIgnoreCase(folderName) ||
                "transactions".equalsIgnoreCase(folderName);
     }
 

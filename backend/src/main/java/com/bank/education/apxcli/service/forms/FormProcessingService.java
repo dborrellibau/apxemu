@@ -127,7 +127,6 @@ public class FormProcessingService {
                 if (pathType == PathType.FOLDER) {
                     NavigationPath path = pathNavigationService.createPath(currentDir);
                     duName = path.getDuName();
-                    String folder = path.getFolderName();
                     
                     // Create object within the specific DU folder
                     switch (formType) {

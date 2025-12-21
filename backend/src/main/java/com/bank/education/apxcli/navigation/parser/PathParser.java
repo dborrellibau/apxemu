@@ -1,5 +1,7 @@
 package com.bank.education.apxcli.navigation.parser;
 
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +11,7 @@ import java.util.stream.Collectors;
  * Parser de rutas para el sistema de navegación
  * Normaliza y tokeniza paths sin acceder a la base de datos
  */
+@Component
 public class PathParser {
 
     /**

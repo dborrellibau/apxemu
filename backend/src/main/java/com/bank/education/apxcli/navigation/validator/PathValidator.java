@@ -5,6 +5,7 @@ import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -68,6 +69,7 @@ public class PathValidator {
     /**
      * Valida que un componente exista dentro de un DU
      */
+    @Transactional(readOnly = true)
     public boolean componentExists(String duName, String componentName) {
         if (duName == null || componentName == null) {
             return false;
@@ -88,6 +90,7 @@ public class PathValidator {
     /**
      * Valida que un componente exista dentro de una carpeta
      */
+    @Transactional(readOnly = true)
     public boolean componentExistsInFolder(String duName, String folderName, String componentName) {
         if (duName == null || folderName == null || componentName == null) {
             return false;
@@ -119,6 +122,7 @@ public class PathValidator {
     /**
      * Valida que una carpeta exista dentro de un DU
      */
+    @Transactional(readOnly = true)
     public boolean folderExists(String duName, String folderName) {
         if (duName == null || folderName == null) {
             return false;

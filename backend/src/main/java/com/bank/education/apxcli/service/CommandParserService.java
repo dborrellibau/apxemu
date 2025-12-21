@@ -251,14 +251,14 @@ public class CommandParserService {
         
         String duName;
         
-        // Determinar duName según el nivel
+        // Determinar duName según el nivel usando NavigationPath
         if (currentType == PathType.DU_LIB || currentType == PathType.DU_ONLINE) {
             // Nivel 1: estamos en un DU
             duName = currentDir;
         } else if (currentType == PathType.FOLDER) {
-            // Nivel 2: estamos en una carpeta
-            String[] pathParts = currentDir.split("/");
-            duName = pathParts[0];
+            // Nivel 2: estamos en una carpeta, obtener duName de NavigationPath
+            NavigationPath path = pathNavigationService.createPath(currentDir);
+            duName = path.getDuName();
         } else {
             return CommandResponse.error("Cannot use 'apx add' in current location");
         }

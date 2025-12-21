@@ -3,6 +3,9 @@ package com.bank.education.apxcli.service.dependencies;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
+import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.validation.ArtifactIdValidationService;
@@ -22,48 +25,52 @@ public class DependencyCommandService {
     private final DependencyManagementService dependencyManagementService;
     private final DeploymentUnitRepository deploymentUnitRepository;
     private final ArtifactIdValidationService validationService;
+    private final PathNavigationService pathNavigationService;
     
     public DependencyCommandService(
             ArchitectureOrchestrationService architectureService,
             DependencyManagementService dependencyManagementService,
             DeploymentUnitRepository deploymentUnitRepository,
-            ArtifactIdValidationService validationService) {
+            ArtifactIdValidationService validationService,
+            PathNavigationService pathNavigationService) {
         this.architectureService = architectureService;
         this.dependencyManagementService = dependencyManagementService;
         this.deploymentUnitRepository = deploymentUnitRepository;
         this.validationService = validationService;
+        this.pathNavigationService = pathNavigationService;
     }
     
     /**
      * Main entry point for "apx add dep" command
      * Detects navigation level and starts appropriate flow
      * 
-     * Level 0 (root): Error - must be inside a DU
-     * Level 1 (du-name): Show component selection
-     * Level 2 (du-name/folder): Show component selection
-     * Level 3 (du-name/folder/component): Start dependency type selection
+     * ROOT: Error - must be inside a DU
+     * DU_ONLINE/DU_LIB: Show component selection
+     * FOLDER: Show component selection
+     * COMPONENT_*: Start dependency type selection
      */
     public CommandResponse handleAddDepCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         
-        // Level 0: root - cannot create dependency from root
+        // ROOT: cannot create dependency from root
         if ("root".equals(currentDir)) {
             return CommandResponse.error("Cannot create dependency from root. Navigate to a deployment unit first (cd <du-name>)");
         }
         
-        // Parse navigation level
-        String[] pathParts = currentDir.split("/");
-        int level = pathParts.length;
+        // Get PathType and NavigationPath
+        PathType pathType = getCurrentPathType(currentDir);
+        NavigationPath path = pathNavigationService.createPath(currentDir);
         
-        if (level == 1) {
-            // Level 1: cd du-name
-            return showSourceComponentSelection(sessionState, pathParts[0]);
-        } else if (level == 2) {
-            // Level 2: cd du-name/folder
-            return showSourceComponentSelection(sessionState, pathParts[0]);
-        } else if (level == 3) {
-            // Level 3: cd du-name/folder/component
-            return startDependencyFlow(sessionState, pathParts[2]);
+        if (pathType == PathType.DU_ONLINE || pathType == PathType.DU_LIB || pathType == PathType.FOLDER) {
+            // Level 1-2: DU or folder - show component selection
+            String duName = path.getDuName();
+            return showSourceComponentSelection(sessionState, duName);
+        } else if (pathType == PathType.COMPONENT_IN_FOLDER || 
+                   pathType == PathType.COMPONENT_IN_DULIB || 
+                   pathType == PathType.COMPONENT_STANDALONE) {
+            // Level 3: component - start dependency flow
+            String componentName = path.getComponentName();
+            return startDependencyFlow(sessionState, componentName);
         } else {
             return CommandResponse.error("Invalid navigation level for dependency creation");
         }
@@ -331,5 +338,18 @@ public class DependencyCommandService {
         }
         
         return allowedTypes;
+    }
+    
+    /**
+     * Helper method to get PathType from currentDirectory string.
+     * Converts legacy string format to PathType.
+     */
+    private PathType getCurrentPathType(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return PathType.ROOT;
+        }
+        
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        return path != null ? path.getType() : PathType.ROOT;
     }
 }
