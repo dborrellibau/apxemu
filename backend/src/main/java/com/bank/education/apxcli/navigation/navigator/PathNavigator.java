@@ -68,8 +68,9 @@ public class PathNavigator {
             return null; // Path inválido
         }
 
-        // Validar transición (solo para rutas relativas)
-        if (!isAbsolute && current != null) {
+        // Validar transición (solo para rutas relativas de UN SOLO PASO)
+        // Si hay múltiples segmentos en el input, es una ruta completa y no necesita validación de transición
+        if (!isAbsolute && current != null && segments.size() == 1) {
             if (!pathValidator.canNavigate(current.getType(), targetType)) {
                 return null; // Transición inválida
             }
