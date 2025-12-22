@@ -28,10 +28,10 @@ public class CommandPermissionService {
 
     /**
      * Valida si se puede eliminar la entidad actual
-     * No permitido en ROOT
+     * Solo permitido en: DU_ONLINE
      */
     public boolean canDelete(PathType currentType) {
-        return currentType != PathType.ROOT;
+        return currentType == PathType.DU_ONLINE;
     }
 
     /**
