@@ -138,10 +138,9 @@ public class PathNavigator {
                 
             case DU_ONLINE:
             case DU_LIB:
-                return segments.size() == 1 && pathValidator.deploymentUnitExists(segments.get(0));
-                
             case COMPONENT_STANDALONE:
-                return segments.size() == 1; // Componentes standalone no se validan en BD
+                // Todos los componentes de nivel 1 deben existir en BD
+                return segments.size() == 1 && pathValidator.deploymentUnitExists(segments.get(0));
                 
             case FOLDER:
                 return segments.size() == 2 && 
