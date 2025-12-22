@@ -104,13 +104,19 @@ public class CommandParserService {
         
         // Check if user is in dependency flow (ETAPA 9 - new functionality)
         if (sessionState.isAwaitingDependencySourceSelection()) {
-            return dependencyCommandService.handleSourceComponentInput(sessionState, originalInput);
+            CommandResponse response = dependencyCommandService.handleSourceComponentInput(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         if (sessionState.isAwaitingDependencyTypeSelection()) {
-            return dependencyCommandService.handleDependencyTypeSelection(sessionState, originalInput);
+            CommandResponse response = dependencyCommandService.handleDependencyTypeSelection(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         if (sessionState.isAwaitingDependencyArtifactId()) {
-            return dependencyCommandService.handleArtifactIdInput(sessionState, originalInput);
+            CommandResponse response = dependencyCommandService.handleArtifactIdInput(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         // Check if user is in an active form session
@@ -184,60 +190,84 @@ public class CommandParserService {
     
     private CommandResponse handleApxCommand(String sessionId, FormState sessionState, String[] args) {
         if (args.length == 0) {
-            return CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
+            CommandResponse response = CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         String subCommand = args[0].toLowerCase();
         String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
         
+        CommandResponse response;
+        
         switch (subCommand) {
             case "help":
-                return showHelp();
+                response = showHelp();
+                break;
             case "init":
                 // Validar permisos: apx init solo permitido en ROOT
                 PathType currentType = getCurrentPathType(sessionState.getCurrentDirectory());
                 if (!permissionService.canCreateDeploymentUnit(currentType)) {
-                    return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
+                    response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
+                } else {
+                    response = systemCommandService.handleInitCommand(subArgs);
                 }
-                return systemCommandService.handleInitCommand(subArgs);
+                break;
             case "add":
                 // Check if it's "apx add dep" (ETAPA 9 - new functionality)
                 if (subArgs.length > 0 && "dep".equalsIgnoreCase(subArgs[0])) {
                     // Validar permisos: apx add dep solo permitido en componentes
                     PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
                     if (!permissionService.canCreateDependency(currentTypeForDep)) {
-                        return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                        response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                    } else {
+                        response = dependencyCommandService.handleAddDepCommand(sessionState);
                     }
-                    return dependencyCommandService.handleAddDepCommand(sessionState);
+                } else {
+                    // Otherwise, normal "apx add" for components
+                    response = handleAddCommand(sessionId, sessionState, subArgs);
                 }
-                // Otherwise, normal "apx add" for components
-                return handleAddCommand(sessionId, sessionState, subArgs);
+                break;
             case "del":
                 // Validar permisos: apx del no permitido en ROOT
                 PathType currentTypeForDel = getCurrentPathType(sessionState.getCurrentDirectory());
                 if (!permissionService.canDelete(currentTypeForDel)) {
-                    return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
+                    response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
+                } else {
+                    response = deletionCommandService.handleDeleteCommand(sessionState);
                 }
-                return deletionCommandService.handleDeleteCommand(sessionState);
+                break;
             case "list":
-                return infoCommandService.handleListCommand(subArgs);
+                response = infoCommandService.handleListCommand(subArgs);
+                break;
             case "dep":
-                return handleDepCommand(subArgs);
+                response = handleDepCommand(subArgs);
+                break;
             case "show":
-                return infoCommandService.handleShowCommand(subArgs, sessionState);
+                response = infoCommandService.handleShowCommand(subArgs, sessionState);
+                break;
             case "debug-du":
-                return infoCommandService.handleDebugDuCommand(subArgs);
+                response = infoCommandService.handleDebugDuCommand(subArgs);
+                break;
             case "reset":
-                return systemCommandService.handleResetSessionCommand(sessionId, activeSessions);
+                response = systemCommandService.handleResetSessionCommand(sessionId, activeSessions);
+                break;
             case "reset-all":
-                return systemCommandService.handleResetAllSessionsCommand(activeSessions);
+                response = systemCommandService.handleResetAllSessionsCommand(activeSessions);
+                break;
             case "debug":
-                return infoCommandService.handleDebugSessionsCommand(activeSessions);
+                response = infoCommandService.handleDebugSessionsCommand(activeSessions);
+                break;
             case "test":
-                return CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
+                response = CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
+                break;
             default:
-                return CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
+                response = CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
+                break;
         }
+        
+        response.setPrompt(sessionState.getCurrentPrompt());
+        return response;
     }
     
     private CommandResponse handleAddCommand(String sessionId, FormState sessionState, String[] args) {
@@ -248,7 +278,9 @@ public class CommandParserService {
         
         // Validar permisos usando CommandPermissionService
         if (!permissionService.canCreateComponent(currentType)) {
-            return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
+            CommandResponse response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         String duName;
@@ -262,25 +294,31 @@ public class CommandParserService {
             NavigationPath path = pathNavigationService.createPath(currentDir);
             duName = path.getDuName();
         } else {
-            return CommandResponse.error("Cannot use 'apx add' in current location");
+            CommandResponse response = CommandResponse.error("Cannot use 'apx add' in current location");
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         // Verify the DU exists
         if (!architectureService.deploymentUnitExists(duName)) {
-            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
+            CommandResponse response = CommandResponse.error("Deployment unit '" + duName + "' does not exist");
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         // Get DU type to check if it's DU-LIB (not allowed)
         DeploymentUnit.DeploymentUnitType duType = directoryNavigationService.getTypeWithCache(duName);
         if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
+            CommandResponse response = CommandResponse.error("Cannot add components to DU-LIB deployment units");
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         // Set flag to indicate we're awaiting component selection
         sessionState.setAwaitingComponentSelection(true);
         
         // Show menu for component type selection
-        return CommandResponse.menu(
+        CommandResponse response = CommandResponse.menu(
             "Select component type:",
             Arrays.asList(
                 "1. DTO (Data Transfer Objects)",
@@ -288,6 +326,8 @@ public class CommandParserService {
                 "3. Library (Library Components)"
             )
         );
+        response.setPrompt(sessionState.getCurrentPrompt());
+        return response;
     }
     
     private CommandResponse handleDepCommand(String[] args) {
