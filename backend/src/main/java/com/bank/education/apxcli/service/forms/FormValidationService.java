@@ -1,6 +1,7 @@
-package com.bank.education.apxcli.form;
+package com.bank.education.apxcli.service.forms;
 
 import com.bank.education.apxcli.dto.CommandResponse;
+import com.bank.education.apxcli.form.FormField;
 import com.bank.education.apxcli.service.ContainableValidationService;
 import org.springframework.stereotype.Service;
 

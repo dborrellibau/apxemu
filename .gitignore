@@ -229,8 +229,6 @@ docker-compose.override.yml
 # ===== APX CLI PROJECT SPECIFIC =====
 # Any project-specific temporary files
 .apx/
-# Local-only engineering notes (do not commit)
-idea_formBuilder.md
 # Banking simulation data (if persisted)
 simulation-data/
 test-data/
