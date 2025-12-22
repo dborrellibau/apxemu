@@ -16,8 +16,8 @@ public class LibImplStrategy extends SimpleDeploymentUnitStrategy {
     @Override
     public List<String> getFormPrompts() {
         return java.util.Arrays.asList(
-            "Enter Application (UUAA) - 4 uppercase letters:",
-            "Enter Library Implementation Code - 3 digits (001-999):",
+            "Enter Application (UUAA) - 4 letters (A-Z):",
+            "Enter Library Implementation Code - 3 digits (000-999):",
             "Enter Description:"
         );
     }

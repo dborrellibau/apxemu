@@ -1,6 +1,7 @@
-package com.bank.education.apxcli.form;
+package com.bank.education.apxcli.service.forms;
 
 import com.bank.education.apxcli.dto.CommandResponse;
+import com.bank.education.apxcli.form.FormField;
 import com.bank.education.apxcli.service.ContainableValidationService;
 import org.springframework.stereotype.Service;
 
@@ -47,10 +48,24 @@ public class FormValidationService {
                 return CommandResponse.success("Valid input");
         }
     }
+
+    public String normalizeInput(FormField field, String input) {
+        if (input == null) return null;
+    
+        String trimmed = input.trim();
+    
+        switch (field.getType()) {
+            case UUAA:
+                return trimmed.toUpperCase();
+            default:
+                return trimmed;
+        }
+    }
     
     private CommandResponse validateUUAA(String input) {
-        if (!input.matches("^[A-Z]{4}$")) {
-            return CommandResponse.error("UUAA must be exactly 4 uppercase letters. Try again:");
+        String upper = input.toUpperCase();
+        if (!upper.matches("^[A-Z]{4}$")) {
+            return CommandResponse.error("UUAA must be exactly 4 letters (A-Z). Try again:");
         }
         return CommandResponse.success("Valid input");
     }
