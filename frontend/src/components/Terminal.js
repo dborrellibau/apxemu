@@ -62,9 +62,14 @@ const Terminal = ({ wsService, isConnected }) => {
         });
       }
       
+      // Calculate max option number dynamically from response
+      const maxOption = response.data && response.data.maxOption 
+      ? response.data.maxOption 
+      : (response.output ? response.output.length : 3); // Fallback to 3 if not provided
+
       newEntries.push({
-        type: 'info',
-        content: 'Enter selection (1-3 or type name):'
+      type: 'info',
+      content: `Enter selection (1-${maxOption} or type name):`
       });
     } else if (response.type === 'FORM') {
       newEntries.push({
