@@ -87,7 +87,9 @@ public class CommandParserService {
         
         // PRIORITY 1: Check for pending confirmation (highest priority)
         if (sessionState.getAwaitingConfirmationFor() != null) {
-            return handleConfirmation(sessionState, originalInput);
+            CommandResponse response = handleConfirmation(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
         }
         
         // Check if user is in deletion flow

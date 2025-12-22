@@ -107,6 +107,9 @@ public class ComponentSelectionService {
             nextPrompt.setMessage(uuaaMessage);
         }
         
+        // Set the correct prompt based on current directory
+        nextPrompt.setPrompt(sessionState.getCurrentPrompt());
+        
         return nextPrompt;
     }
 }
