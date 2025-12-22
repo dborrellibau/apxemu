@@ -464,7 +464,7 @@ public class DeletionCommandService {
      * ETAPA 6: Execute confirmed deletion (soft delete)
      * Action format: "delete-component-123" where 123 is the component ID
      */
-    public CommandResponse executeConfirmedDelete(String action) {
+    public CommandResponse executeConfirmedDelete(String action, FormState sessionState) {
         // Parse action string like "delete-component-123"
         if (!action.startsWith("delete-component-")) {
             return CommandResponse.error("Invalid deletion action format: " + action);
@@ -494,6 +494,25 @@ public class DeletionCommandService {
         String componentType = component.getType().getValue();
         component.setDeleted(true);
         deploymentUnitRepository.save(component);
+        
+        // If we're currently inside the deleted component, navigate to parent
+        String currentDir = sessionState.getCurrentDirectory();
+        if (currentDir != null && !"root".equals(currentDir)) {
+            NavigationPath currentPath = pathNavigationService.createPath(currentDir);
+            if (currentPath != null && currentPath.getType() == PathType.COMPONENT_IN_FOLDER ||
+                currentPath.getType() == PathType.COMPONENT_IN_DULIB ||
+                currentPath.getType() == PathType.COMPONENT_STANDALONE) {
+                // Check if the current component matches the deleted one
+                if (componentName.equals(currentPath.getComponentName())) {
+                    // Navigate to parent (the folder containing this component)
+                    String parentPath = currentPath.getDuName();
+                    if (currentPath.getFolderName() != null) {
+                        parentPath = parentPath + "/" + currentPath.getFolderName();
+                    }
+                    sessionState.setCurrentDirectory(parentPath);
+                }
+            }
+        }
         
         // Notify frontend to update diagram
         diagramService.notifyDiagramUpdate();

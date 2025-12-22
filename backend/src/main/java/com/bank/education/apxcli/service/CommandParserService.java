@@ -371,7 +371,7 @@ public class CommandParserService {
         if ("y".equals(inputLower) || input.trim().isEmpty()) {
             // Dispatch to appropriate service based on action prefix
             if (action.startsWith("delete-")) {
-                return deletionCommandService.executeConfirmedDelete(action);
+                return deletionCommandService.executeConfirmedDelete(action, sessionState);
             }
             if (action.startsWith("create-component-")) {
                 return formProcessingService.executeConfirmedCreate(action, sessionState);
