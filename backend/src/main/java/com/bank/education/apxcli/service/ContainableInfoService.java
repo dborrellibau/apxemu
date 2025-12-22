@@ -170,6 +170,7 @@ public class ContainableInfoService {
     /**
      * List components within a specific folder of a deployment unit
      */
+    @Transactional(readOnly = true)
     public CommandResponse listComponentsInFolder(String duName, String folderName) {
         Optional<DeploymentUnit> duOpt = repository.findByName(duName);
         if (!duOpt.isPresent()) {

@@ -3,6 +3,8 @@ package com.bank.education.apxcli.service.navigation;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.DeploymentUnitNavigationService;
 import org.springframework.stereotype.Service;
@@ -12,17 +14,21 @@ import java.util.List;
 
 /**
  * Service responsible for navigation commands (cd, pwd, ls)
+ * Integrado con PathNavigationService para centralizar lógica de navegación
  */
 @Service
 public class NavigationCommandService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitNavigationService navigationService;
+    private final PathNavigationService pathNavigationService;
     
     public NavigationCommandService(ArchitectureOrchestrationService architectureService,
-                                   DeploymentUnitNavigationService navigationService) {
+                                   DeploymentUnitNavigationService navigationService,
+                                   PathNavigationService pathNavigationService) {
         this.architectureService = architectureService;
         this.navigationService = navigationService;
+        this.pathNavigationService = pathNavigationService;
     }
     
     public CommandResponse handleCdCommand(FormState sessionState, String[] args) {
@@ -40,104 +46,48 @@ public class NavigationCommandService {
         
         String target = args[0];
         
-        // Handle cd .. (go back)
-        if ("..".equals(target)) {
-            if ("root".equals(currentDir)) {
+        // Convertir currentDir string a NavigationPath
+        NavigationPath currentPath = convertToNavigationPath(currentDir);
+        
+        // Usar PathNavigationService para navegar
+        NavigationPath newPath = pathNavigationService.navigate(target, currentPath);
+        
+        if (newPath == null) {
+            // Navegación falló, dar mensaje específico
+            if ("..".equals(target)) {
                 return CommandResponse.error("Already at root directory");
             }
-            
-            // Retroceder un nivel: quitar el último segmento del path
-            if (currentDir.contains("/")) {
-                // Estamos en un nivel anidado (nivel 2 o 3+)
-                int lastSlashIndex = currentDir.lastIndexOf("/");
-                String parentDir = currentDir.substring(0, lastSlashIndex);
-                
-                sessionState.setCurrentDirectory(parentDir);
-                return CommandResponse.success("Changed directory to /vether/" + parentDir);
-            } else {
-                // Estamos en un DU (nivel 1), retroceder a root
-                sessionState.setCurrentDirectory("root");
-                return CommandResponse.success("Changed directory to /vether");
-            }
+            return CommandResponse.error("Cannot navigate to '" + target + "'. Path does not exist or is invalid.");
         }
         
-        // Handle absolute path navigation (du-name/folder)
-        if (target.contains("/")) {
-            String[] pathParts = target.split("/");
-            
-            if (pathParts.length != 2) {
-                return CommandResponse.error("Invalid path format. Use: <du-name>/<folder>");
-            }
-            
-            String duName = pathParts[0];
-            String folder = pathParts[1];
-            
-            // Validate that the DU exists
-            if (!architectureService.containableExists(duName, null)) {
-                return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-            }
-            
-            // Validate folder name using navigation service
-            if (!navigationService.isValidFolder(duName, folder)) {
-                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
-            }
-            
-            sessionState.setCurrentDirectory(duName + "/" + folder);
-            return CommandResponse.success("Changed directory to /vether/" + target);
+        // Convertir NavigationPath de vuelta a string para sessionState
+        String newDir = convertToDirectoryString(newPath);
+        sessionState.setCurrentDirectory(newDir);
+        
+        String displayPath = "root".equals(newDir) ? "/vether" : "/vether/" + newDir;
+        return CommandResponse.success("Changed directory to " + displayPath);
+    }
+    
+    /**
+     * Convierte el string currentDirectory (legacy) a NavigationPath
+     */
+    private NavigationPath convertToNavigationPath(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return pathNavigationService.navigateToRoot();
         }
         
-        // Handle single directory navigation
-        if ("root".equals(currentDir)) {
-            // From root, can only navigate to existing deployment units
-            if (!architectureService.containableExists(target, null)) {
-                return CommandResponse.error("Deployment unit '" + target + "' does not exist. Use 'apx list' to see available deployment units.");
-            }
-            
-            sessionState.setCurrentDirectory(target);
-            return CommandResponse.success("Changed directory to /vether/" + target);
-        } else if (!currentDir.contains("/")) {
-            // From deployment unit, can navigate to folders
-            String duName = currentDir;
-            
-            // Validate folder name using navigation service
-            if (!navigationService.isValidFolder(duName, target)) {
-                return CommandResponse.error(navigationService.getInvalidFolderErrorMessage(duName));
-            }
-            
-            sessionState.setCurrentDirectory(duName + "/" + target);
-            return CommandResponse.success("Changed directory to /vether/" + duName + "/" + target);
-        } else {
-            // Estamos en nivel 2+ (carpeta o componente), intentar navegar más profundo
-            String[] pathParts = currentDir.split("/");
-            
-            if (pathParts.length == 2) {
-                // Estamos en nivel 2 (DU/carpeta), intentar navegar a componente (nivel 3)
-                String duName = pathParts[0];
-                String folderName = pathParts[1];
-                
-                System.out.println("DEBUG NavigationService: Attempting to navigate to component. DU=" + duName + ", Folder=" + folderName + ", Component=" + target);
-                
-                try {
-                    // Validar que el componente existe en esta carpeta específica
-                    boolean exists = architectureService.componentExistsInFolder(duName, folderName, target);
-                    System.out.println("DEBUG NavigationService: componentExistsInFolder returned: " + exists);
-                    
-                    if (exists) {
-                        sessionState.setCurrentDirectory(currentDir + "/" + target);
-                        return CommandResponse.success("Changed directory to /vether/" + currentDir + "/" + target);
-                    } else {
-                        return CommandResponse.error("Component '" + target + "' does not exist in this folder. Use 'ls' to see available components.");
-                    }
-                } catch (Exception e) {
-                    System.out.println("DEBUG NavigationService: Exception caught: " + e.getMessage());
-                    e.printStackTrace();
-                    return CommandResponse.error("Error checking component existence: " + e.getMessage());
-                }
-            } else {
-                // Estamos en nivel 3+ (componente), no podemos ir más profundo
-                return CommandResponse.error("Cannot navigate deeper. Use 'cd ..' to go back.");
-            }
+        return pathNavigationService.createPath(currentDir);
+    }
+    
+    /**
+     * Convierte NavigationPath a string currentDirectory (legacy)
+     */
+    private String convertToDirectoryString(NavigationPath path) {
+        if (path == null || path.getSegments().isEmpty()) {
+            return "root";
         }
+        
+        return String.join("/", path.getSegments());
     }
     
     public CommandResponse handlePwdCommand(FormState sessionState) {
@@ -166,9 +116,9 @@ public class NavigationCommandService {
             return response;
         } else {
             // In specific folder, list components within that folder
-            String[] pathParts = currentDir.split("/");
-            String duName = pathParts[0];
-            String folder = pathParts[1];
+            NavigationPath path = pathNavigationService.createPath(currentDir);
+            String duName = path.getDuName();
+            String folder = path.getFolderName();
             
             return architectureService.listComponentsInFolder(duName, folder);
         }

@@ -6,6 +6,7 @@ import com.bank.education.apxcli.dto.DeploymentUnitDto;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +27,7 @@ public class DeploymentUnitQueryService {
     /**
      * Lists deployment units, optionally filtered by type
      */
+    @Transactional(readOnly = true)
     public CommandResponse listDeploymentUnits(String type) {
         List<DeploymentUnit> units;
         
@@ -49,10 +51,9 @@ public class DeploymentUnitQueryService {
         // ETAPA 9: Add [DELETED] marker to deleted units
         List<String> unitNames = units.stream()
             .map(unit -> {
-                String prefix = unit.getType().name().toLowerCase() + ": ";
                 String name = unit.getName();
                 String suffix = unit.isDeleted() ? " \u001B[31m[DELETED]\u001B[0m" : "";
-                return prefix + name + suffix;
+                return name + suffix;
             })
             .collect(Collectors.toList());
         
@@ -67,6 +68,7 @@ public class DeploymentUnitQueryService {
     
     /**
      * Gets all deployment units as DTOs for diagram visualization
+    @Transactional(readOnly = true)
      */
     public List<ContainableDto> getAllDeploymentUnits() {
         return repository.findAllWithFolders().stream()

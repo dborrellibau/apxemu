@@ -3,6 +3,9 @@ package com.bank.education.apxcli.service.deletion;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
+import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.DiagramService;
@@ -26,46 +29,57 @@ public class DeletionCommandService {
     private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitRepository deploymentUnitRepository;
     private final DiagramService diagramService;
+    private final PathNavigationService pathNavigationService;
     
     public DeletionCommandService(
             ArchitectureOrchestrationService architectureService,
             DeploymentUnitRepository deploymentUnitRepository,
-            DiagramService diagramService) {
+            DiagramService diagramService,
+            PathNavigationService pathNavigationService) {
         this.architectureService = architectureService;
         this.deploymentUnitRepository = deploymentUnitRepository;
         this.diagramService = diagramService;
+        this.pathNavigationService = pathNavigationService;
     }
     
     /**
      * Main entry point for "apx del" command
      * Detects navigation level and shows appropriate deletion menu
      * 
-     * Level 0 (root): Show DU deletion menu (du-online/du-lib only)
-     * Level 1 (du-name): Show type selection menu (dep/dto/job/lib/trx/util)
-     * Level 2 (du-name/folder): Show component selection from folder
-     * Level 3 (du-name/folder/component): Confirm deletion of specific component
+     * ROOT: Show DU deletion menu (du-online/du-lib only)
+     * DU_ONLINE/DU_LIB: Show type selection menu (dep/dto/job/lib/trx/util)
+     * FOLDER: Show component selection from folder
+     * COMPONENT_*: Confirm deletion of specific component
      */
     public CommandResponse handleDeleteCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         
-        // Level 0: root
+        // ROOT: show DU deletion menu
         if ("root".equals(currentDir)) {
             return showRootDeletionMenu(sessionState);
         }
         
-        // Parse navigation level
-        String[] pathParts = currentDir.split("/");
-        int level = pathParts.length;
+        // Get PathType and NavigationPath
+        PathType pathType = getCurrentPathType(currentDir);
+        NavigationPath path = pathNavigationService.createPath(currentDir);
         
-        if (level == 1) {
-            // Level 1: cd du-name
-            return showDUContextMenu(sessionState, pathParts[0]);
-        } else if (level == 2) {
-            // Level 2: cd du-name/folder
-            return showFolderContextMenu(sessionState, pathParts[0], pathParts[1]);
-        } else if (level == 3) {
-            // Level 3: cd du-name/folder/component
-            return showComponentDeletionConfirmation(sessionState, pathParts[0], pathParts[1], pathParts[2]);
+        if (pathType == PathType.DU_ONLINE || pathType == PathType.DU_LIB) {
+            // Level 1: DU - show type selection menu
+            String duName = path.getDuName();
+            return showDUContextMenu(sessionState, duName);
+        } else if (pathType == PathType.FOLDER) {
+            // Level 2: folder - show component selection
+            String duName = path.getDuName();
+            String folderName = path.getFolderName();
+            return showFolderContextMenu(sessionState, duName, folderName);
+        } else if (pathType == PathType.COMPONENT_IN_FOLDER || 
+                   pathType == PathType.COMPONENT_IN_DULIB || 
+                   pathType == PathType.COMPONENT_STANDALONE) {
+            // Level 3: component - confirm deletion
+            String duName = path.getDuName();
+            String folderName = path.getFolderName();
+            String componentName = path.getComponentName();
+            return showComponentDeletionConfirmation(sessionState, duName, folderName, componentName);
         } else {
             return CommandResponse.error("Invalid navigation level for deletion");
         }
@@ -450,7 +464,7 @@ public class DeletionCommandService {
      * ETAPA 6: Execute confirmed deletion (soft delete)
      * Action format: "delete-component-123" where 123 is the component ID
      */
-    public CommandResponse executeConfirmedDelete(String action) {
+    public CommandResponse executeConfirmedDelete(String action, FormState sessionState) {
         // Parse action string like "delete-component-123"
         if (!action.startsWith("delete-component-")) {
             return CommandResponse.error("Invalid deletion action format: " + action);
@@ -481,6 +495,25 @@ public class DeletionCommandService {
         component.setDeleted(true);
         deploymentUnitRepository.save(component);
         
+        // If we're currently inside the deleted component, navigate to parent
+        String currentDir = sessionState.getCurrentDirectory();
+        if (currentDir != null && !"root".equals(currentDir)) {
+            NavigationPath currentPath = pathNavigationService.createPath(currentDir);
+            if (currentPath != null && currentPath.getType() == PathType.COMPONENT_IN_FOLDER ||
+                currentPath.getType() == PathType.COMPONENT_IN_DULIB ||
+                currentPath.getType() == PathType.COMPONENT_STANDALONE) {
+                // Check if the current component matches the deleted one
+                if (componentName.equals(currentPath.getComponentName())) {
+                    // Navigate to parent (the folder containing this component)
+                    String parentPath = currentPath.getDuName();
+                    if (currentPath.getFolderName() != null) {
+                        parentPath = parentPath + "/" + currentPath.getFolderName();
+                    }
+                    sessionState.setCurrentDirectory(parentPath);
+                }
+            }
+        }
+        
         // Notify frontend to update diagram
         diagramService.notifyDiagramUpdate();
         
@@ -495,5 +528,18 @@ public class DeletionCommandService {
         message.append("remember to remove those dependencies manually.\u001B[0m");
         
         return CommandResponse.success(message.toString());
+    }
+    
+    /**
+     * Helper method to get PathType from currentDirectory string.
+     * Converts legacy string format to PathType.
+     */
+    private PathType getCurrentPathType(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return PathType.ROOT;
+        }
+        
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        return path != null ? path.getType() : PathType.ROOT;
     }
 }
