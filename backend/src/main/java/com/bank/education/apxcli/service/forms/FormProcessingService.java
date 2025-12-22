@@ -2,6 +2,9 @@ package com.bank.education.apxcli.service.forms;
 
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
+import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.util.ConfirmationMessages;
 import org.springframework.stereotype.Service;
@@ -15,9 +18,12 @@ import java.util.Map;
 public class FormProcessingService {
     
     private final ArchitectureOrchestrationService architectureService;
+    private final PathNavigationService pathNavigationService;
     
-    public FormProcessingService(ArchitectureOrchestrationService architectureService) {
+    public FormProcessingService(ArchitectureOrchestrationService architectureService,
+                                PathNavigationService pathNavigationService) {
         this.architectureService = architectureService;
+        this.pathNavigationService = pathNavigationService;
     }
     
     /**
@@ -113,12 +119,14 @@ public class FormProcessingService {
                 }
             }
             
-            // Check if we're in a specific directory and should create object within that DU
-            if (!"root".equals(currentDir) && currentDir != null && currentDir.contains("/")) {
-                String[] pathParts = currentDir.split("/");
-                if (pathParts.length == 2) {
-                    duName = pathParts[0];
-                    String folder = pathParts[1];
+            // Check if we're in a specific folder and should create object within that DU
+            if (!"root".equals(currentDir) && currentDir != null) {
+                PathType pathType = getCurrentPathType(currentDir);
+                
+                // If we're in a FOLDER (level 2), create component within that DU
+                if (pathType == PathType.FOLDER) {
+                    NavigationPath path = pathNavigationService.createPath(currentDir);
+                    duName = path.getDuName();
                     
                     // Create object within the specific DU folder
                     switch (formType) {
@@ -191,5 +199,18 @@ public class FormProcessingService {
         } catch (Exception e) {
             return CommandResponse.error("Error creating " + formType + ": " + e.getMessage());
         }
+    }
+    
+    /**
+     * Helper method to get PathType from currentDirectory string.
+     * Converts legacy string format to PathType for validation.
+     */
+    private PathType getCurrentPathType(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return PathType.ROOT;
+        }
+        
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        return path != null ? path.getType() : PathType.ROOT;
     }
 }

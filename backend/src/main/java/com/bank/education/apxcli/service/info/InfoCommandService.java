@@ -2,6 +2,9 @@ package com.bank.education.apxcli.service.info;
 
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
+import com.bank.education.apxcli.navigation.PathNavigationService;
+import com.bank.education.apxcli.navigation.model.NavigationPath;
+import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.ContainableInfoService;
 import org.springframework.stereotype.Service;
@@ -16,13 +19,16 @@ public class InfoCommandService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final ContainableInfoService containableInfoService;
+    private final PathNavigationService pathNavigationService;
     
     public InfoCommandService(
         ArchitectureOrchestrationService architectureService,
-        ContainableInfoService containableInfoService
+        ContainableInfoService containableInfoService,
+        PathNavigationService pathNavigationService
     ) {
         this.architectureService = architectureService;
         this.containableInfoService = containableInfoService;
+        this.pathNavigationService = pathNavigationService;
     }
     
     public CommandResponse handleListCommand(String[] args) {
@@ -31,58 +37,58 @@ public class InfoCommandService {
     }
     
     /**
-     * Context-aware show command (ETAPA 1)
-     * - Level 0 (root): NOT AVAILABLE - returns error
-     * - Level 1 (du-name or standalone component): shows DU or component info
-     * - Level 3 (du-name/folder/component): shows component info
+     * Context-aware show command (ETAPA 10 - refactored with PathNavigationService)
+     * - ROOT: NOT AVAILABLE - returns error
+     * - DU_ONLINE/DU_LIB/COMPONENT_STANDALONE: shows DU or component info
+     * - COMPONENT_IN_FOLDER/COMPONENT_IN_DULIB: shows component info
+     * - FOLDER: not supported
      */
     public CommandResponse handleShowCommand(String[] args, FormState sessionState) {
-        // Get current directory to detect navigation level
+        // Get current directory and PathType
         String currentDir = sessionState.getCurrentDirectory();
         if (currentDir == null) currentDir = "root";
         
-        int level = detectNavigationLevel(currentDir);
+        PathType pathType = getCurrentPathType(currentDir);
         
-        // Level 0 (root): NOT AVAILABLE
-        if (level == 0) {
+        // ROOT: NOT AVAILABLE
+        if (pathType == PathType.ROOT) {
             return CommandResponse.error("Command 'apx show' not available from root level");
         }
         
-        // Level 1: DU or standalone component
-        if (level == 1) {
-            // currentDir is just the name (e.g., "delfina")
-            return handleShowAtLevel1(currentDir);
+        // FOLDER: not supported
+        if (pathType == PathType.FOLDER) {
+            return CommandResponse.error("Command 'apx show' not available at folder level");
         }
         
-        // Level 3: Component inside folder
-        if (level == 3) {
-            // currentDir is like "delfina/dto/UUAAC001", extract component name
-            String[] parts = currentDir.split("/");
-            String componentName = parts[2];
+        // DU or standalone component (level 1)
+        if (pathType == PathType.DU_ONLINE || pathType == PathType.DU_LIB || 
+            pathType == PathType.COMPONENT_STANDALONE) {
+            NavigationPath path = pathNavigationService.createPath(currentDir);
+            String name = path.getDuName() != null ? path.getDuName() : currentDir;
+            return handleShowAtLevel1(name);
+        }
+        
+        // Component inside folder or DU_LIB (level 2-3)
+        if (pathType == PathType.COMPONENT_IN_FOLDER || pathType == PathType.COMPONENT_IN_DULIB) {
+            NavigationPath path = pathNavigationService.createPath(currentDir);
+            String componentName = path.getComponentName();
             return handleShowAtLevel3(componentName);
         }
         
-        // Level 2 (folder): not supported
-        return CommandResponse.error("Command 'apx show' not available at folder level");
+        return CommandResponse.error("Command 'apx show' not available at current location");
     }
     
     /**
-     * Detect navigation level from currentDirectory
-     * Level 0: "root"
-     * Level 1: "delfina" (no slashes)
-     * Level 2: "delfina/library" (1 slash)
-     * Level 3: "delfina/library/COMP001" (2 slashes)
+     * Helper method to get PathType from currentDirectory string.
+     * Converts legacy string format to PathType for level detection.
      */
-    private int detectNavigationLevel(String currentDir) {
-        if ("root".equals(currentDir)) return 0;
-        
-        // Count slashes to determine level
-        int slashes = 0;
-        for (char c : currentDir.toCharArray()) {
-            if (c == '/') slashes++;
+    private PathType getCurrentPathType(String currentDir) {
+        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
+            return PathType.ROOT;
         }
         
-        return slashes + 1; // 0 slashes = level 1, 1 slash = level 2, 2 slashes = level 3
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        return path != null ? path.getType() : PathType.ROOT;
     }
     
     /**

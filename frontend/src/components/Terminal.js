@@ -64,7 +64,7 @@ const Terminal = ({ wsService, isConnected }) => {
       
       newEntries.push({
         type: 'info',
-        content: 'Enter selection (1-4 or type name):'
+        content: 'Enter selection (1-3 or type name):'
       });
     } else if (response.type === 'FORM') {
       newEntries.push({

@@ -19,11 +19,14 @@
 - **Seguridad**: Configuración básica de Spring Security
 - **Arquitectura**: Orientada a servicios con packages separados por funcionalidad
   - `info/` - Comandos de información
-  - `navigation/` - Comandos de navegación
-  - `deletion/` - Comandos de eliminación
-  - `dependencies/` - Gestión de dependencias
-  - `forms/` - Procesamiento de formularios
+  - `navigation/` - Comandos de navegación con PathNavigationService
+  - `deletion/` - Comandos de eliminación con auto-navegación
+  - `dependencies/` - Gestión interactiva de dependencias
+  - `forms/` - Procesamiento de formularios con validación
   - `validation/` - Validación de códigos bancarios
+  - `permission/` - Sistema centralizado de permisos por PathType
+- **Sistema de Navegación**: PathNavigationService con 7 PathTypes para navegación type-safe
+- **Gestión de Transacciones**: @Transactional para prevenir LazyInitializationException
 
 ### Frontend (React)
 - **Framework**: React 18 con hooks modernos
@@ -41,6 +44,14 @@ apxemu/
 │   │   ├── dto/                     # Data Transfer Objects (FormState, CommandResponse)
 │   │   ├── model/                   # Entidades JPA (DeploymentUnit, ComponentFolder)
 │   │   ├── repository/              # Capa de acceso a datos
+│   │   ├── navigation/              # Sistema de navegación centralizado
+│   │   │   ├── PathNavigationService.java    # Navegación type-safe
+│   │   │   ├── model/               # PathType, NavigationPath
+│   │   │   ├── navigator/           # PathNavigator para transiciones
+│   │   │   ├── parser/              # PathParser para segmentos
+│   │   │   ├── resolver/            # PathTypeResolver con caché
+│   │   │   ├── validator/           # PathValidator con @Transactional
+│   │   │   └── permission/          # CommandPermissionService centralizado
 │   │   ├── service/
 │   │   │   ├── deletion/            # Servicio de comandos de eliminación
 │   │   │   ├── dependencies/        # Gestión de dependencias
@@ -163,13 +174,18 @@ CUSTDTO002 (dto)
 ### Comandos APX de Gestión
 
 #### `apx init` - Creación Interactiva de Componentes
-Lanza un menú interactivo para crear componentes bancarios:
+Lanza un menú interactivo para crear deployment units bancarios.
+
+**Restricciones de Permisos:**
+- ✅ Solo permitido desde **ROOT**
+- ❌ Bloqueado en DU, carpetas y componentes
 
 **Características:**
 - Selección de tipo de deployment unit (DU-ONLINE, DU-LIB)
 - Prompts guiados para todos los campos requeridos
 - Validación automática de códigos bancarios (UUAA)
 - Creación en base de datos y actualización del diagrama
+- Mantiene el prompt correcto durante todo el flujo
 
 **Flujo:**
 ```bash
@@ -187,116 +203,136 @@ Ingrese el código UUAA (4 letras mayúsculas): CUST
 Deployment unit 'customer-service' creado exitosamente.
 ```
 
-#### `apx add` - Adición de Componentes Context-Aware
-Agrega componentes basándose en tu ubicación actual:
+#### `apx add` - Adición de Componentes
+Agrega componentes (DTO, Library, Transaction) dentro de deployment units.
 
-**Nivel 0 (Root):**
-```bash
-V-Ether/root> apx add
-# Muestra menú para crear DU
-```
+**Restricciones de Permisos:**
+- ✅ Solo permitido desde **DU_ONLINE**
+- ❌ Bloqueado en ROOT, DU_LIB, carpetas y componentes
 
-**Nivel 1 (DU):**
+**Flujo desde DU_ONLINE:**
 ```bash
 V-Ether/customer-service> apx add
 
 Seleccione el tipo de componente:
-1. DTO
-2. Library
-3. Transaction
-> 1
+1. DTO (Data Transfer Objects)
+2. Transaction (Business Transaction)
+3. Library (Library Components)
+vether/customer-service> 1
 
-Ingrese el nombre del componente: CUSTDTO001
-Ingrese la descripción: Data transfer object de cliente
-Ingrese el código UUAA: CUST
+UUAA: CUST
+Enter DTO Code - 3 digits (000-999):
+vether/customer-service> 001
+Enter Class Name:
+vether/customer-service> CustomerDto
+Enter Description:
+vether/customer-service> Data transfer object de cliente
+Do you want to continue with the operation? (Y/n): 
+vether/customer-service> y
 
-Componente 'CUSTDTO001' creado en customer-service/dto
-```
-
-**Nivel 2 (Carpeta):**
-```bash
-V-Ether/customer-service/dto> apx add
-# Crea componente directamente en la carpeta actual
-```
-
-#### `apx add dep` - Gestión Interactiva de Dependencias
-Crea dependencias entre componentes con workflow guiado:
-
-**Flujo completo:**
-```bash
-V-Ether/root> apx add dep
-
-Paso 1: Seleccionar componente origen
-Componentes disponibles:
-1. customer-service
-2. account-service
-3. user-service
-Seleccione el número del componente origen: 1
-
-Paso 2: Seleccionar componente destino
-Componentes disponibles:
-1. account-service
-2. user-service
-Seleccione el número del componente destino: 2
-
-Confirmar creación de dependencia: customer-service → user-service? (Y/n): Y
-
-Dependencia creada exitosamente.
+Created DTO 'CUSTC001' in customer-service/dto
 ```
 
 **Características:**
-- Menús numerados interactivos
-- Validación de componentes existentes
+- UUAA auto-detectado del DU padre
+- Validación de códigos únicos
 - Confirmación antes de crear
-- Actualización automática del diagrama con nueva conexión
+- Prompt mantiene contexto de navegación durante todo el flujo
+- Actualización automática del diagrama
 
-#### `apx del` - Eliminación Context-Aware
-Elimina componentes con confirmaciones de seguridad:
+#### `apx add dep` - Gestión Interactiva de Dependencias
+Crea dependencias entre componentes con workflow guiado.
 
-**Nivel 0 (Root):**
+**Restricciones de Permisos:**
+- ✅ Solo permitido desde **COMPONENTES** (COMPONENT_IN_FOLDER, COMPONENT_IN_DULIB, COMPONENT_STANDALONE)
+- ❌ Bloqueado en ROOT, DU y carpetas
+
+**Flujo completo desde componente:**
 ```bash
-V-Ether/root> apx del
+V-Ether/customer-service/library/CUSTLIB001> apx add dep
 
-¿Qué desea eliminar?
-1. customer-service (DU-ONLINE)
-2. account-service (DU-ONLINE)
-> 1
+Select dependency type for CUSTLIB001 (LIB):
+1. DTO
 
-¿Eliminar deployment unit 'customer-service'? (Y/n): Y
-Deployment unit 'customer-service' eliminado.
+Enter type number or name:
+vether/customer-service/library/CUSTLIB001> 1
+
+Enter artifact ID of the dependency (DTO):
+vether/customer-service/library/CUSTLIB001> CUSTC001
+
+Do you want to continue with the operation? (Y/n): 
+vether/customer-service/library/CUSTLIB001> y
+
+Created dependency: CUSTLIB001 -> CUSTC001
 ```
 
-**Nivel 1 (DU):**
+**Características:**
+- Auto-detección del componente origen basado en tu ubicación
+- Tipos de dependencia permitidos según el tipo de componente origen
+- Validación de artifact IDs existentes
+- Prevención de dependencias a LIB_IMPL (solo base LIB permitido)
+- Confirmación antes de crear
+- Prompt mantiene contexto de navegación durante todo el flujo
+- Actualización automática del diagrama con nueva conexión
+
+#### `apx del` - Eliminación de Componentes
+Elimina componentes con confirmaciones de seguridad y menús interactivos.
+
+**Restricciones de Permisos:**
+- ✅ Solo permitido desde **DU_ONLINE**
+- ❌ Bloqueado en ROOT, DU_LIB, carpetas y componentes
+
+**Flujo desde DU_ONLINE:**
 ```bash
 V-Ether/customer-service> apx del
 
-¿Qué desea eliminar?
-1. dto (carpeta completa)
-2. library (carpeta completa)
-3. transactions (carpeta completa)
-4. Navegar a componentes específicos
-> 4
+Select component type to delete:
+1. DTO (Data Transfer Objects)
+2. Transaction (Business Transaction)
+3. Library (Library Components)
 
-Seleccione carpeta:
-1. dto
-2. library
-> 1
+Enter selection (1-3 or type name):
+vether/customer-service> 1
 
-Componentes en dto:
-1. CUSTDTO001
-2. CUSTDTO002
-> 1
+Select DTO component to delete:
+1. CUSTC001
+2. CUSTC002
 
-¿Eliminar componente 'CUSTDTO001'? (Y/n): Y
-Componente 'CUSTDTO001' eliminado.
+Enter selection (1-2):
+vether/customer-service> 1
+
+╔══════════════════════════════════════════════════════════╗
+║          CONFIRMACIÓN DE ELIMINACIÓN                     ║
+╚══════════════════════════════════════════════════════════╝
+
+Componente: CUSTC001
+Ubicación: customer-service/dto
+Tipo: dto
+Descripción: Data transfer object de cliente
+
+NOTA: Si este elemento es dependencia de otro, recordá eliminar
+      la dependencia manualmente con el comando apropiado.
+
+¿Confirmar eliminación? (Y/n): 
+vether/customer-service> y
+
+✓ Component successfully marked as deleted
+
+Component: CUSTC001
+Type: dto
+
+NOTE: If this component is referenced as a dependency elsewhere,
+remember to remove those dependencies manually.
 ```
 
-**Nivel 2 (Carpeta):**
-```bash
-V-Ether/customer-service/dto> apx del
-
-¿Qué desea eliminar?
-1. dto (carpeta completa)
+**Características:**
+- Menús interactivos con selecciones numeradas por tipo
+- Pantalla de confirmación detallada con información del componente
+- Confirmación Y/n antes de eliminar
+- Soft delete (marcado como eliminado, no removido físicamente)
+- Auto-navegación al padre si eliminas el componente donde estás ubicado
+- Items eliminados mostrados en rojo con marcador `[DELETED]`
+- Actualizaciones del diagrama en tiempo real
 2. CUSTDTO001
 3. CUSTDTO002
 > 2
@@ -321,16 +357,23 @@ Componente 'CUSTDTO001' eliminado.
 - Actualizaciones del diagrama en tiempo real
 
 #### `apx list [type]` - Listar Componentes
-Ve todos los deployment units o filtra por tipo:
+Ve todos los deployment units o filtra por tipo. Comando global independiente de ubicación.
+
+**Diferencia con `ls`:**
+- `ls`: Muestra contenido local según tu ubicación (context-aware)
+- `apx list`: Búsqueda global en todo el sistema
 
 ```bash
 apx list                    # Listar todos los deployment units
 apx list du-online          # Listar solo deployment units online
 apx list du-lib             # Listar solo deployment units de librería
+apx list dto                # Listar todos los DTOs del sistema
+apx list lib                # Listar todas las librerías del sistema
+apx list trx                # Listar todas las transacciones del sistema
 ```
 
 **Salida incluye:**
-- Nombre y tipo del componente
+- Solo nombres de componentes (sin prefijo de tipo)
 - Estado de eliminación (marcado en rojo si está eliminado)
 - Organizado por tipo
 
@@ -338,15 +381,11 @@ apx list du-lib             # Listar solo deployment units de librería
 ```bash
 V-Ether/root> apx list
 
-Deployment Units:
-=================
+customer-service
+account-service [DELETED]
+common-utils
 
-DU-ONLINE:
-- customer-service
-- account-service [DELETED]
-
-DU-LIB:
-- common-utils
+Total deployment units: 3
 ```
 
 #### `apx show` - Mostrar Detalles de Componentes
@@ -569,10 +608,75 @@ taskkill /PID <process_id> /F
 
 ## Detalles Técnicos
 
+### Sistema de Navegación PathNavigationService
+Sistema centralizado y type-safe para manejar navegación jerárquica:
+
+**PathTypes (7 niveles):**
+- `ROOT`: Nivel raíz del sistema
+- `DU_ONLINE`: Deployment Unit Online
+- `DU_LIB`: Deployment Unit Library
+- `FOLDER`: Carpeta dentro de DU (dto/, library/, transactions/)
+- `COMPONENT_IN_FOLDER`: Componente dentro de carpeta de DU_ONLINE
+- `COMPONENT_IN_DULIB`: Componente dentro de DU_LIB
+- `COMPONENT_STANDALONE`: Componente independiente (futuro)
+
+**Componentes:**
+- `PathParser`: Divide rutas en segmentos
+- `PathTypeResolver`: Determina PathType con caché para performance
+- `PathValidator`: Valida existencia de rutas con @Transactional
+- `PathNavigator`: Maneja transiciones válidas entre tipos
+- `NavigationPath`: Modelo inmutable de ruta con tipo
+
+**Ventajas:**
+- Type-safety en toda la navegación
+- Validación centralizada de transiciones
+- Caché para optimizar performance
+- Prevención de LazyInitializationException con @Transactional
+
+### Sistema de Permisos Centralizado
+CommandPermissionService centraliza todas las validaciones de permisos:
+
+**Métodos de Validación:**
+- `canCreateDeploymentUnit(PathType)`: Solo ROOT
+- `canCreateComponent(PathType)`: Solo DU_ONLINE
+- `canCreateDependency(PathType)`: Solo componentes
+- `canDelete(PathType)`: Solo DU_ONLINE
+- `canDeleteDependency(PathType)`: Solo componentes
+
+**Mensajes de Error:**
+- `getPermissionDeniedMessage(command, PathType)`: Genera mensajes descriptivos
+- `getPathTypeDescription(PathType)`: Descripciones legibles de cada tipo
+
+**Flujo:**
+1. CommandParserService detecta comando
+2. Obtiene PathType actual usando PathNavigationService
+3. Valida permisos con CommandPermissionService
+4. Si permitido → ejecuta comando
+5. Si bloqueado → retorna mensaje de error descriptivo
+
+### Gestión de Prompts Consistente
+Mantiene el prompt correcto durante todos los flujos interactivos:
+
+**Implementación:**
+- `FormState.getCurrentPrompt()`: Genera prompt basado en currentDirectory
+- Todos los `CommandResponse` llevan el prompt actualizado
+- Establecido en múltiples puntos:
+  - Después de navegación (cd)
+  - Durante flujos de formularios (apx add)
+  - Durante flujos de dependencias (apx add dep)
+  - Después de confirmaciones (Y/n)
+  - En mensajes de error de permisos
+
+**Formato:**
+- Root: `vether>`
+- DU: `vether/customer-service>`
+- Carpeta: `vether/customer-service/library>`
+- Componente: `vether/customer-service/library/CUSTLIB001>`
+
 ### Validación de Códigos Bancarios
 - **UUAA (Código de Aplicación)**: 4 letras mayúsculas (ej: "CUST", "ACCT")
 - **Código de Componente**: 3 dígitos (ej: "001", "002")
-- **Nomenclatura de Componente**: Patrón `UUAA + TIPO + CODIGO` (ej: "CUSTDTO001")
+- **Nomenclatura de Componente**: Patrón `UUAA + TIPO + CODIGO` (ej: "CUSTC001")
 - Validación automática previene códigos bancarios inválidos
 
 ### Patrón Soft Delete
@@ -582,12 +686,44 @@ taskkill /PID <process_id> /F
 - Mostrados con marcador rojo `[DELETED]` en comandos de listado
 - Dependencias a componentes eliminados se manejan automáticamente
 
+### Auto-Navegación en Eliminación
+Cuando eliminas un componente donde estás ubicado:
+1. Sistema detecta que currentDirectory coincide con componente eliminado
+2. Navega automáticamente al directorio padre (carpeta contenedora)
+3. Actualiza sessionState.currentDirectory
+4. Próximo prompt refleja nueva ubicación
+
+**Ejemplo:**
+```bash
+vether/customer-service/library/CUSTLIB001> apx del
+# (elimina CUSTLIB001)
+✓ Component successfully marked as deleted
+vether/customer-service/library> # Auto-navegado al padre
+```
+
 ### Comandos Context-Aware
 Estado de navegación determina comportamiento del comando:
-- **Nivel 0 (root)**: Crear DU, listar todos, gestionar operaciones a nivel DU
-- **Nivel 1 (DU)**: Crear carpetas/componentes, gestionar contenidos de DU
-- **Nivel 2 (carpeta)**: Crear componentes en carpeta, listar contenido de carpeta
-- **Nivel 3 (componente)**: Mostrar detalles de componente, gestionar componente
+- **ROOT**: `apx init` (crear DU), `apx list` (listar todos), `ls` (listar DUs)
+- **DU_ONLINE**: `apx add` (crear componentes), `apx del` (eliminar), `ls` (listar carpetas)
+- **DU_LIB**: Solo navegación y consulta, sin modificaciones
+- **FOLDER**: `ls` (listar componentes en carpeta)
+- **COMPONENT**: `apx add dep` (crear dependencias), `apx show` (ver detalles)
+
+### Prevención de LazyInitializationException
+Uso extensivo de `@Transactional(readOnly = true)` en métodos que acceden a colecciones lazy:
+
+**Métodos anotados:**
+- `PathValidator.folderExists()`
+- `PathValidator.componentExists()`
+- `PathValidator.componentExistsInFolder()`
+- `ContainableInfoService.listComponentsInFolder()`
+- `DeploymentUnitQueryService.listDeploymentUnits()`
+- `DeploymentUnitQueryService.getAllDeploymentUnits()`
+
+**Beneficios:**
+- Previene excepciones al acceder a colecciones lazy
+- Mantiene sesión Hibernate abierta durante traversal de entidades
+- Performance optimizada con readOnly=true
 
 ### Arquitectura WebSocket
 - **Protocolo**: STOMP sobre SockJS
