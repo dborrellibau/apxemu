@@ -20,11 +20,10 @@ public class CommandPermissionService {
 
     /**
      * Valida si se puede crear un componente desde la posición actual
-     * Permitido en: FOLDER, DU_LIB
+     * Permitido solo en: DU_ONLINE
      */
     public boolean canCreateComponent(PathType currentType) {
-        return currentType == PathType.FOLDER ||
-               currentType == PathType.DU_LIB;
+        return currentType == PathType.DU_ONLINE;
     }
 
     /**
