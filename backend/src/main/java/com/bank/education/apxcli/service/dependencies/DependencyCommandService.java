@@ -42,37 +42,31 @@ public class DependencyCommandService {
     
     /**
      * Main entry point for "apx add dep" command
-     * Detects navigation level and starts appropriate flow
+     * ONLY allowed from component level (COMPONENT_IN_FOLDER, COMPONENT_IN_DULIB, COMPONENT_STANDALONE)
      * 
-     * ROOT: Error - must be inside a DU
-     * DU_ONLINE/DU_LIB: Show component selection
-     * FOLDER: Show component selection
-     * COMPONENT_*: Start dependency type selection
+     * Must be inside a specific component to create a dependency
      */
     public CommandResponse handleAddDepCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         
         // ROOT: cannot create dependency from root
         if ("root".equals(currentDir)) {
-            return CommandResponse.error("Cannot create dependency from root. Navigate to a deployment unit first (cd <du-name>)");
+            return CommandResponse.error("Cannot create dependency from root. Navigate to a component first (cd <component-name>)");
         }
         
         // Get PathType and NavigationPath
         PathType pathType = getCurrentPathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
-        if (pathType == PathType.DU_ONLINE || pathType == PathType.DU_LIB || pathType == PathType.FOLDER) {
-            // Level 1-2: DU or folder - show component selection
-            String duName = path.getDuName();
-            return showSourceComponentSelection(sessionState, duName);
-        } else if (pathType == PathType.COMPONENT_IN_FOLDER || 
-                   pathType == PathType.COMPONENT_IN_DULIB || 
-                   pathType == PathType.COMPONENT_STANDALONE) {
+        // Only allow from component level
+        if (pathType == PathType.COMPONENT_IN_FOLDER || 
+            pathType == PathType.COMPONENT_IN_DULIB || 
+            pathType == PathType.COMPONENT_STANDALONE) {
             // Level 3: component - start dependency flow
             String componentName = path.getComponentName();
             return startDependencyFlow(sessionState, componentName);
         } else {
-            return CommandResponse.error("Invalid navigation level for dependency creation");
+            return CommandResponse.error("Command 'apx add dep' can only be executed from within a component. Navigate to a component first (cd <component-name>)");
         }
     }
     
