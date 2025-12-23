@@ -64,7 +64,9 @@ public class ComponentSelectionService {
         String duUuaa = architectureService.getDeploymentUnitUuaa(duName);
         
         if (duUuaa == null) {
-            return CommandResponse.error("Could not retrieve UUAA from deployment unit: " + duName);
+            CommandResponse error = CommandResponse.error("Could not retrieve UUAA from deployment unit: " + duName);
+            error.setPrompt(sessionState.getCurrentPrompt());
+            return error;
         }
         
         // Start form session with UUAA pre-filled
