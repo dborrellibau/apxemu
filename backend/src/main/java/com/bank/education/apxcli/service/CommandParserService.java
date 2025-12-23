@@ -131,7 +131,7 @@ public class CommandParserService {
         }
         
         // Check if user selected from menu (numbers or type names)
-        if (command.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
+        if (command.matches("^(\\d+|du-online|du-lib|dto|lib|trx|util|job|du-batch)$")) {
             // Clear any residual session before starting new form
             activeSessions.remove(sessionId);
             
@@ -144,12 +144,22 @@ public class CommandParserService {
                     case 3: formType = "dto"; break;
                     case 4: formType = "lib"; break;
                     case 5: formType = "trx"; break;
+                    case 6: formType = "util"; break;
+                    case 7: formType = "job"; break;
+                    case 8: formType = "du-batch"; break;
                     default: 
-                        CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5.");
+                        CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-8.");
                         errorResponse.setPrompt(sessionState.getCurrentPrompt());
                         return errorResponse;
                 }
             }
+            // Check if selected option is under construction
+            if ("util".equals(formType) || "job".equals(formType) || "du-batch".equals(formType)) {
+                CommandResponse response = CommandResponse.error("Esta opcion en proceso de construccion. Selecciona nuevamente una opcion valida para continuar.");
+                response.setPrompt(sessionState.getCurrentPrompt());
+                return response;
+            }
+
             CommandResponse response = componentSelectionService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
