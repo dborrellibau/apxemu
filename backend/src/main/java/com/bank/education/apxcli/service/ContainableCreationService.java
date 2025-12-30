@@ -264,7 +264,8 @@ public class ContainableCreationService {
     }
     
     public CommandResponse createLib(String uuaa, String code, String description) {
-        return createContainable("lib", null, uuaa, code, null, null, null, description, null);
+        // For standalone libraries, create both base and impl
+        return createLibStandaloneWithImpl(uuaa, code, description);
     }
     
     public CommandResponse createTrx(String uuaa, String code, String version, String country, String description) {
@@ -347,6 +348,44 @@ public class ContainableCreationService {
         
         return CommandResponse.success(
             "Created LIB '" + baseName + "' and '" + implName + "' in " + duName + "/library"
+        );
+    }
+
+        /**
+     * Creates a standalone library component with both base and impl versions in root
+     */
+    private CommandResponse createLibStandaloneWithImpl(String uuaa, String code, String description) {
+        // Build library names: UUAAR### (base) and UUAAR###IMPL (impl)
+        String baseName = uuaa + "R" + code;
+        String implName = baseName + "IMPL";
+        
+        // Check if base or impl already exist by name
+        if (repository.existsByName(baseName)) {
+            return CommandResponse.error("Library '" + baseName + "' already exists");
+        }
+        if (repository.existsByName(implName)) {
+            return CommandResponse.error("Library '" + implName + "' already exists");
+        }
+        
+        // Validate using strategy
+        DeploymentUnitStrategy strategy = DeploymentUnitStrategyFactory.getStrategy(DeploymentUnit.DeploymentUnitType.LIB);
+        CommandResponse validation = strategy.validateCreation(uuaa, code, description, null);
+        if (!validation.isSuccess()) {
+            return validation;
+        }
+        
+        // Create base library (standalone in root)
+        DeploymentUnit baseLib = new DeploymentUnit(baseName, DeploymentUnit.DeploymentUnitType.LIB, uuaa, code, null, description);
+        repository.save(baseLib);
+        
+        // Create impl library (standalone in root)
+        DeploymentUnit implLib = new DeploymentUnit(implName, DeploymentUnit.DeploymentUnitType.LIB_IMPL, uuaa, code, null, description);
+        repository.save(implLib);
+        
+        diagramService.notifyDiagramUpdate();
+        
+        return CommandResponse.success(
+            "Created LIB '" + baseName + "' and '" + implName + "' in root"
         );
     }
 
