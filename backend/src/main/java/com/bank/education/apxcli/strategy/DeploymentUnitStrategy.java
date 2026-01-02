@@ -50,4 +50,58 @@ public interface DeploymentUnitStrategy {
      * Gets the number of form steps required for creation
      */
     int getFormStepsCount();
+    
+    /**
+     * Indicates if this deployment unit type supports input/output management
+     * Only TRX components support this feature
+     * 
+     * @return true if supports in/out management, false otherwise
+     */
+    default boolean supportsInOutManagement() {
+        return false;
+    }
+    
+    /**
+     * Adds a DTO as input to a transaction
+     * 
+     * @param unit The transaction unit
+     * @param dto The DTO to add as input
+     * @return CommandResponse with result
+     */
+    default CommandResponse addInput(DeploymentUnit unit, DeploymentUnit dto) {
+        return CommandResponse.error("This component type does not support input management");
+    }
+    
+    /**
+     * Adds a DTO as output to a transaction
+     * 
+     * @param unit The transaction unit
+     * @param dto The DTO to add as output
+     * @return CommandResponse with result
+     */
+    default CommandResponse addOutput(DeploymentUnit unit, DeploymentUnit dto) {
+        return CommandResponse.error("This component type does not support output management");
+    }
+    
+    /**
+     * Removes a DTO from transaction inputs
+     * 
+     * @param unit The transaction unit
+     * @param dto The DTO to remove from inputs
+     * @return CommandResponse with result
+     */
+    default CommandResponse removeInput(DeploymentUnit unit, DeploymentUnit dto) {
+        return CommandResponse.error("This component type does not support input management");
+    }
+    
+    /**
+     * Removes a DTO from transaction outputs
+     * 
+     * @param unit The transaction unit
+     * @param dto The DTO to remove from outputs
+     * @return CommandResponse with result
+     */
+    default CommandResponse removeOutput(DeploymentUnit unit, DeploymentUnit dto) {
+        return CommandResponse.error("This component type does not support output management");
+    }
 }
