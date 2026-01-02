@@ -38,6 +38,7 @@ public class CommandParserService {
     private final DeploymentUnitNavigationService directoryNavigationService;
     private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
     private final com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService;
+    private final com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService;
     private final PathNavigationService pathNavigationService;
     private final CommandPermissionService permissionService;
     
@@ -53,6 +54,7 @@ public class CommandParserService {
                                DeploymentUnitNavigationService directoryNavigationService,
                                com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService,
                                com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService,
+                               com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService,
                                PathNavigationService pathNavigationService,
                                CommandPermissionService permissionService) {
         this.navigationService = navigationService;
@@ -65,6 +67,7 @@ public class CommandParserService {
         this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
         this.deletionCommandService = deletionCommandService;
+        this.inOutCommandService = inOutCommandService;
         this.pathNavigationService = pathNavigationService;
         this.permissionService = permissionService;
         
@@ -117,6 +120,18 @@ public class CommandParserService {
         }
         if (sessionState.isAwaitingDependencyArtifactId()) {
             CommandResponse response = dependencyCommandService.handleArtifactIdInput(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
+        }
+        
+        // Check if user is in in/out flow
+        if (sessionState.isInOutSelectionMode()) {
+            CommandResponse response = inOutCommandService.handleOptionSelection(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
+        }
+        if (sessionState.isAwaitingInOutDtoName()) {
+            CommandResponse response = inOutCommandService.handleDtoNameInput(sessionState, originalInput);
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
         }
@@ -216,17 +231,29 @@ public class CommandParserService {
                 }
                 break;
             case "add":
-                // Check if it's "apx add dep" (ETAPA 9 - new functionality)
-                if (subArgs.length > 0 && "dep".equalsIgnoreCase(subArgs[0])) {
-                    // Validar permisos: apx add dep solo permitido en componentes
-                    PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
-                    if (!permissionService.canCreateDependency(currentTypeForDep)) {
-                        response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                // Check for subcommands: dep, in, out
+                if (subArgs.length > 0) {
+                    String addSubCommand = subArgs[0].toLowerCase();
+                    if ("dep".equals(addSubCommand)) {
+                        // Validar permisos: apx add dep solo permitido en componentes
+                        PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
+                        if (!permissionService.canCreateDependency(currentTypeForDep)) {
+                            response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                        } else {
+                            response = dependencyCommandService.handleAddDepCommand(sessionState);
+                        }
+                    } else if ("in".equals(addSubCommand)) {
+                        // apx add in - add input to transaction
+                        response = inOutCommandService.handleAddIn(sessionState);
+                    } else if ("out".equals(addSubCommand)) {
+                        // apx add out - add output to transaction
+                        response = inOutCommandService.handleAddOut(sessionState);
                     } else {
-                        response = dependencyCommandService.handleAddDepCommand(sessionState);
+                        // Unknown subcommand, treat as normal apx add
+                        response = handleAddCommand(sessionId, sessionState, subArgs);
                     }
                 } else {
-                    // Otherwise, normal "apx add" for components
+                    // No subcommand, normal "apx add" for components
                     response = handleAddCommand(sessionId, sessionState, subArgs);
                 }
                 break;
