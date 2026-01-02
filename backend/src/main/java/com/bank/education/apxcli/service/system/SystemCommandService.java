@@ -31,7 +31,10 @@ public class SystemCommandService {
                 "2. du-lib     - Deployment Unit Library (base + impl)",
                 "3. dto        - Data Transfer Object",
                 "4. lib        - Library component (creates base + impl)",
-                "5. trx        - Transaction component"
+                "5. trx        - Transaction component",
+                "6. util       - Utility component (under construction)",
+                "7. job        - Job component (under construction)",
+                "8. du-batch   - Deployment Unit Batch (under construction)"
             )
         );
     }

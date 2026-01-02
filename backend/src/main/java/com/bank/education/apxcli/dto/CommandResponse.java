@@ -47,7 +47,16 @@ public class CommandResponse {
     }
     
     public static CommandResponse menu(String message, List<String> options) {
-        return new CommandResponse(true, message, options, ResponseType.MENU, null);
+        CommandResponse response = new CommandResponse(true, message, options, ResponseType.MENU, null);
+        // Calculate max option number dynamically
+        int maxOption = options != null ? options.size() : 0;
+        // Store in data field as a map for extensibility
+        if (maxOption > 0) {
+            java.util.Map<String, Object> menuData = new java.util.HashMap<>();
+            menuData.put("maxOption", maxOption);
+            response.setData(menuData);
+        }
+        return response;
     }
     
     public static CommandResponse form(String message, Object formData) {
