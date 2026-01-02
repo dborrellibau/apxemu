@@ -8,7 +8,7 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
-import com.bank.education.apxcli.service.forms.ComponentSelectionService;
+import com.bank.education.apxcli.service.forms.AddComponentService;
 import com.bank.education.apxcli.service.forms.FormInputService;
 import com.bank.education.apxcli.service.forms.FormProcessingService;
 import com.bank.education.apxcli.service.info.InfoCommandService;
@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommandParserService {
     
     private final NavigationCommandService navigationService;
-    private final ComponentSelectionService componentSelectionService;
+    private final AddComponentService addComponentService;
     private final FormInputService formInputService;
     private final FormProcessingService formProcessingService;
     private final InfoCommandService infoCommandService;
@@ -45,7 +45,7 @@ public class CommandParserService {
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
     public CommandParserService(NavigationCommandService navigationService,
-                               ComponentSelectionService componentSelectionService,
+                               AddComponentService addComponentService,
                                FormInputService formInputService,
                                FormProcessingService formProcessingService,
                                InfoCommandService infoCommandService,
@@ -58,7 +58,7 @@ public class CommandParserService {
                                PathNavigationService pathNavigationService,
                                CommandPermissionService permissionService) {
         this.navigationService = navigationService;
-        this.componentSelectionService = componentSelectionService;
+        this.addComponentService = addComponentService;
         this.formInputService = formInputService;
         this.formProcessingService = formProcessingService;
         this.infoCommandService = infoCommandService;
@@ -72,7 +72,7 @@ public class CommandParserService {
         this.permissionService = permissionService;
         
         // Share activeSessions with form services
-        this.componentSelectionService.setActiveSessions(activeSessions);
+        this.addComponentService.setActiveSessions(activeSessions);
         this.formInputService.setActiveSessions(activeSessions);
         
         // Clear any residual sessions on startup
@@ -102,9 +102,48 @@ public class CommandParserService {
             return response;
         }
         
-        // Check if user is waiting for component selection after apx add
+        // Check if user is waiting for init menu selection (apx init - numbers 1-5)
+        if (sessionState.isAwaitingInitSelection()) {
+            // Handle numeric selection (1-5) or type names (du-online, dto, lib, trx)
+            if (originalInput.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
+                // Clear any residual session before starting new form
+                activeSessions.remove(sessionId);
+                
+                String formType = originalInput.toLowerCase();
+                if (originalInput.matches("^\\d+$")) {
+                    int selection = Integer.parseInt(originalInput);
+                    switch (selection) {
+                        case 1: formType = "du-online"; break;
+                        case 2: formType = "du-lib"; break;
+                        case 3: formType = "dto"; break;
+                        case 4: formType = "lib"; break;
+                        case 5: formType = "trx"; break;
+                        default: 
+                            sessionState.setAwaitingInitSelection(false);
+                            CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5.");
+                            errorResponse.setPrompt(sessionState.getCurrentPrompt());
+                            return errorResponse;
+                    }
+                }
+                
+                // Clear the flag
+                sessionState.setAwaitingInitSelection(false);
+                
+                CommandResponse response = addComponentService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
+                response.setPrompt(sessionState.getCurrentPrompt());
+                return response;
+            } else {
+                // Not a valid selection for init
+                sessionState.setAwaitingInitSelection(false);
+                CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5 or type name (du-online, du-lib, dto, lib, trx)");
+                errorResponse.setPrompt(sessionState.getCurrentPrompt());
+                return errorResponse;
+            }
+        }
+        
+        // Check if user is waiting for component selection after apx add (numbers 1-3)
         if (sessionState.isAwaitingComponentSelection()) {
-            return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
+            return addComponentService.handleComponentSelection(sessionId, originalInput, sessionState);
         }
         
         // Check if user is in dependency flow (ETAPA 9 - new functionality)
@@ -141,31 +180,6 @@ public class CommandParserService {
         if (activeForm != null && activeForm.getFormType() != null) {
             // User is in a form, treat any input as form data
             CommandResponse response = formInputService.handleFormInput(sessionId, originalInput, activeForm, sessionState);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Check if user selected from menu (numbers or type names)
-        if (command.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
-            // Clear any residual session before starting new form
-            activeSessions.remove(sessionId);
-            
-            String formType = command;
-            if (command.matches("^\\d+$")) {
-                int selection = Integer.parseInt(command);
-                switch (selection) {
-                    case 1: formType = "du-online"; break;
-                    case 2: formType = "du-lib"; break;
-                    case 3: formType = "dto"; break;
-                    case 4: formType = "lib"; break;
-                    case 5: formType = "trx"; break;
-                    default: 
-                        CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5.");
-                        errorResponse.setPrompt(sessionState.getCurrentPrompt());
-                        return errorResponse;
-                }
-            }
-            CommandResponse response = componentSelectionService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
         }
@@ -227,7 +241,7 @@ public class CommandParserService {
                 if (!permissionService.canCreateDeploymentUnit(currentType)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
                 } else {
-                    response = systemCommandService.handleInitCommand(subArgs);
+                    response = systemCommandService.handleInitCommand(subArgs, sessionState);
                 }
                 break;
             case "add":

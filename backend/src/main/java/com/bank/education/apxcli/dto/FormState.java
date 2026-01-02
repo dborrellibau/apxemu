@@ -9,6 +9,7 @@ public class FormState {
     private Map<String, String> formData;
     private String currentDirectory; // For navigation: "root" or "<du-name>/<folder>"
     private boolean awaitingComponentSelection; // Flag for apx add component selection
+    private boolean awaitingInitSelection;      // Flag for apx init menu selection
     
     // Dependency flow flags
     private boolean awaitingDependencySourceSelection; // Flag for selecting source component (levels 1-2)
@@ -29,6 +30,7 @@ public class FormState {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
         this.awaitingComponentSelection = false;
+        this.awaitingInitSelection = false;
         this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
@@ -125,6 +127,14 @@ public class FormState {
     
     public void setAwaitingComponentSelection(boolean awaitingComponentSelection) {
         this.awaitingComponentSelection = awaitingComponentSelection;
+    }
+    
+    public boolean isAwaitingInitSelection() {
+        return awaitingInitSelection;
+    }
+    
+    public void setAwaitingInitSelection(boolean awaitingInitSelection) {
+        this.awaitingInitSelection = awaitingInitSelection;
     }
     
     // Dependency flow getters and setters

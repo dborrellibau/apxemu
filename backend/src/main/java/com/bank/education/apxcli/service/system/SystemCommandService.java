@@ -20,7 +20,10 @@ public class SystemCommandService {
         this.architectureService = architectureService;
     }
     
-    public CommandResponse handleInitCommand(String[] args) {
+    public CommandResponse handleInitCommand(String[] args, com.bank.education.apxcli.dto.FormState sessionState) {
+        // Set flag to indicate we're awaiting init menu selection (1-5)
+        sessionState.setAwaitingInitSelection(true);
+        
         return CommandResponse.menu(
             "Select banking component type to initialize:",
             Arrays.asList(
