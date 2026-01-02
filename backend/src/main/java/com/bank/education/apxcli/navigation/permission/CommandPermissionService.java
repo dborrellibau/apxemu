@@ -51,7 +51,18 @@ public class CommandPermissionService {
     public boolean canDeleteDependency(PathType currentType) {
         return canCreateDependency(currentType);
     }
-
+    
+    /**
+     * Valida si se puede agregar inputs/outputs a una transacción desde la posición actual
+     * Permitido en: COMPONENT_IN_FOLDER, COMPONENT_IN_DULIB, COMPONENT_STANDALONE (solo si es TRX)
+     * La validación de que sea TRX se hace en el servicio usando Strategy Pattern
+     */
+    public boolean canAddInOut(PathType currentType) {
+        return currentType == PathType.COMPONENT_IN_FOLDER ||
+               currentType == PathType.COMPONENT_IN_DULIB ||
+               currentType == PathType.COMPONENT_STANDALONE;
+    }
+    
     /**
      * Valida si se puede listar contenido desde la posición actual
      * Permitido en todos excepto componentes (que no tienen hijos)

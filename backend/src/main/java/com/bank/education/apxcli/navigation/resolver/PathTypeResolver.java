@@ -117,6 +117,12 @@ public class PathTypeResolver {
                 return PathType.DU_ONLINE;
             case DU_LIB:
                 return PathType.DU_LIB;
+            case TRX:
+            case DTO:
+            case LIB:
+            case LIB_IMPL:
+                // Componentes standalone creados con apx init desde root
+                return PathType.COMPONENT_STANDALONE;
             default:
                 return null;
         }

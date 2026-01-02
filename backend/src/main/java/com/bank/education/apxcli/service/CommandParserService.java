@@ -8,7 +8,7 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
-import com.bank.education.apxcli.service.forms.ComponentSelectionService;
+import com.bank.education.apxcli.service.forms.AddComponentService;
 import com.bank.education.apxcli.service.forms.FormInputService;
 import com.bank.education.apxcli.service.forms.FormProcessingService;
 import com.bank.education.apxcli.service.info.InfoCommandService;
@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommandParserService {
     
     private final NavigationCommandService navigationService;
-    private final ComponentSelectionService componentSelectionService;
+    private final AddComponentService addComponentService;
     private final FormInputService formInputService;
     private final FormProcessingService formProcessingService;
     private final InfoCommandService infoCommandService;
@@ -38,13 +38,14 @@ public class CommandParserService {
     private final DeploymentUnitNavigationService directoryNavigationService;
     private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
     private final com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService;
+    private final com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService;
     private final PathNavigationService pathNavigationService;
     private final CommandPermissionService permissionService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
     public CommandParserService(NavigationCommandService navigationService,
-                               ComponentSelectionService componentSelectionService,
+                               AddComponentService addComponentService,
                                FormInputService formInputService,
                                FormProcessingService formProcessingService,
                                InfoCommandService infoCommandService,
@@ -53,10 +54,11 @@ public class CommandParserService {
                                DeploymentUnitNavigationService directoryNavigationService,
                                com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService,
                                com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService,
+                               com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService,
                                PathNavigationService pathNavigationService,
                                CommandPermissionService permissionService) {
         this.navigationService = navigationService;
-        this.componentSelectionService = componentSelectionService;
+        this.addComponentService = addComponentService;
         this.formInputService = formInputService;
         this.formProcessingService = formProcessingService;
         this.infoCommandService = infoCommandService;
@@ -65,11 +67,12 @@ public class CommandParserService {
         this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
         this.deletionCommandService = deletionCommandService;
+        this.inOutCommandService = inOutCommandService;
         this.pathNavigationService = pathNavigationService;
         this.permissionService = permissionService;
         
         // Share activeSessions with form services
-        this.componentSelectionService.setActiveSessions(activeSessions);
+        this.addComponentService.setActiveSessions(activeSessions);
         this.formInputService.setActiveSessions(activeSessions);
         
         // Clear any residual sessions on startup
@@ -99,9 +102,48 @@ public class CommandParserService {
             return response;
         }
         
-        // Check if user is waiting for component selection after apx add
+        // Check if user is waiting for init menu selection (apx init - numbers 1-5)
+        if (sessionState.isAwaitingInitSelection()) {
+            // Handle numeric selection (1-5) or type names (du-online, dto, lib, trx)
+            if (originalInput.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
+                // Clear any residual session before starting new form
+                activeSessions.remove(sessionId);
+                
+                String formType = originalInput.toLowerCase();
+                if (originalInput.matches("^\\d+$")) {
+                    int selection = Integer.parseInt(originalInput);
+                    switch (selection) {
+                        case 1: formType = "du-online"; break;
+                        case 2: formType = "du-lib"; break;
+                        case 3: formType = "dto"; break;
+                        case 4: formType = "lib"; break;
+                        case 5: formType = "trx"; break;
+                        default: 
+                            sessionState.setAwaitingInitSelection(false);
+                            CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5.");
+                            errorResponse.setPrompt(sessionState.getCurrentPrompt());
+                            return errorResponse;
+                    }
+                }
+                
+                // Clear the flag
+                sessionState.setAwaitingInitSelection(false);
+                
+                CommandResponse response = addComponentService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
+                response.setPrompt(sessionState.getCurrentPrompt());
+                return response;
+            } else {
+                // Not a valid selection for init
+                sessionState.setAwaitingInitSelection(false);
+                CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5 or type name (du-online, du-lib, dto, lib, trx)");
+                errorResponse.setPrompt(sessionState.getCurrentPrompt());
+                return errorResponse;
+            }
+        }
+        
+        // Check if user is waiting for component selection after apx add (numbers 1-3)
         if (sessionState.isAwaitingComponentSelection()) {
-            return componentSelectionService.handleComponentSelection(sessionId, originalInput, sessionState);
+            return addComponentService.handleComponentSelection(sessionId, originalInput, sessionState);
         }
         
         // Check if user is in dependency flow (ETAPA 9 - new functionality)
@@ -121,46 +163,23 @@ public class CommandParserService {
             return response;
         }
         
+        // Check if user is in in/out flow
+        if (sessionState.isInOutSelectionMode()) {
+            CommandResponse response = inOutCommandService.handleOptionSelection(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
+        }
+        if (sessionState.isAwaitingInOutDtoName()) {
+            CommandResponse response = inOutCommandService.handleDtoNameInput(sessionState, originalInput);
+            response.setPrompt(sessionState.getCurrentPrompt());
+            return response;
+        }
+        
         // Check if user is in an active form session
         FormState activeForm = activeSessions.get(sessionId);
         if (activeForm != null && activeForm.getFormType() != null) {
             // User is in a form, treat any input as form data
             CommandResponse response = formInputService.handleFormInput(sessionId, originalInput, activeForm, sessionState);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Check if user selected from menu (numbers or type names)
-        if (command.matches("^(\\d+|du-online|du-lib|dto|lib|trx|util|job|du-batch)$")) {
-            // Clear any residual session before starting new form
-            activeSessions.remove(sessionId);
-            
-            String formType = command;
-            if (command.matches("^\\d+$")) {
-                int selection = Integer.parseInt(command);
-                switch (selection) {
-                    case 1: formType = "du-online"; break;
-                    case 2: formType = "du-lib"; break;
-                    case 3: formType = "dto"; break;
-                    case 4: formType = "lib"; break;
-                    case 5: formType = "trx"; break;
-                    case 6: formType = "util"; break;
-                    case 7: formType = "job"; break;
-                    case 8: formType = "du-batch"; break;
-                    default: 
-                        CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-8.");
-                        errorResponse.setPrompt(sessionState.getCurrentPrompt());
-                        return errorResponse;
-                }
-            }
-            // Check if selected option is under construction
-            if ("util".equals(formType) || "job".equals(formType) || "du-batch".equals(formType)) {
-                CommandResponse response = CommandResponse.error("Esta opcion en proceso de construccion. Selecciona nuevamente una opcion valida para continuar.");
-                response.setPrompt(sessionState.getCurrentPrompt());
-                return response;
-            }
-
-            CommandResponse response = componentSelectionService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
             response.setPrompt(sessionState.getCurrentPrompt());
             return response;
         }
@@ -222,21 +241,33 @@ public class CommandParserService {
                 if (!permissionService.canCreateDeploymentUnit(currentType)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
                 } else {
-                    response = systemCommandService.handleInitCommand(subArgs);
+                    response = systemCommandService.handleInitCommand(subArgs, sessionState);
                 }
                 break;
             case "add":
-                // Check if it's "apx add dep" (ETAPA 9 - new functionality)
-                if (subArgs.length > 0 && "dep".equalsIgnoreCase(subArgs[0])) {
-                    // Validar permisos: apx add dep solo permitido en componentes
-                    PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
-                    if (!permissionService.canCreateDependency(currentTypeForDep)) {
-                        response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                // Check for subcommands: dep, in, out
+                if (subArgs.length > 0) {
+                    String addSubCommand = subArgs[0].toLowerCase();
+                    if ("dep".equals(addSubCommand)) {
+                        // Validar permisos: apx add dep solo permitido en componentes
+                        PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
+                        if (!permissionService.canCreateDependency(currentTypeForDep)) {
+                            response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
+                        } else {
+                            response = dependencyCommandService.handleAddDepCommand(sessionState);
+                        }
+                    } else if ("in".equals(addSubCommand)) {
+                        // apx add in - add input to transaction
+                        response = inOutCommandService.handleAddIn(sessionState);
+                    } else if ("out".equals(addSubCommand)) {
+                        // apx add out - add output to transaction
+                        response = inOutCommandService.handleAddOut(sessionState);
                     } else {
-                        response = dependencyCommandService.handleAddDepCommand(sessionState);
+                        // Unknown subcommand, treat as normal apx add
+                        response = handleAddCommand(sessionId, sessionState, subArgs);
                     }
                 } else {
-                    // Otherwise, normal "apx add" for components
+                    // No subcommand, normal "apx add" for components
                     response = handleAddCommand(sessionId, sessionState, subArgs);
                 }
                 break;

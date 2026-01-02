@@ -9,6 +9,7 @@ public class FormState {
     private Map<String, String> formData;
     private String currentDirectory; // For navigation: "root" or "<du-name>/<folder>"
     private boolean awaitingComponentSelection; // Flag for apx add component selection
+    private boolean awaitingInitSelection;      // Flag for apx init menu selection
     
     // Dependency flow flags
     private boolean awaitingDependencySourceSelection; // Flag for selecting source component (levels 1-2)
@@ -18,6 +19,10 @@ public class FormState {
     // Deletion flow flag - indicates user is in deletion menu/selection
     private boolean awaitingDeletionSelection;
     
+    // In/Out flow flags (for apx add in/out)
+    private boolean inOutSelectionMode;        // Flag for selecting in/out type (dto, group, list, parameters)
+    private boolean awaitingInOutDtoName;      // Flag for entering DTO name
+    
     // Confirmation flow - stores action string like "delete-component-123" or null
     private String awaitingConfirmationFor;
     
@@ -25,10 +30,13 @@ public class FormState {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
         this.awaitingComponentSelection = false;
+        this.awaitingInitSelection = false;
         this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
         this.awaitingDeletionSelection = false;
+        this.inOutSelectionMode = false;
+        this.awaitingInOutDtoName = false;
         this.awaitingConfirmationFor = null;
     }
     
@@ -121,6 +129,14 @@ public class FormState {
         this.awaitingComponentSelection = awaitingComponentSelection;
     }
     
+    public boolean isAwaitingInitSelection() {
+        return awaitingInitSelection;
+    }
+    
+    public void setAwaitingInitSelection(boolean awaitingInitSelection) {
+        this.awaitingInitSelection = awaitingInitSelection;
+    }
+    
     // Dependency flow getters and setters
     public boolean isAwaitingDependencySourceSelection() {
         return awaitingDependencySourceSelection;
@@ -205,5 +221,32 @@ public class FormState {
         this.formData.remove("deletionFolder");
         this.formData.remove("deletionStep");
         this.formData.remove("deletionComponentCount");
+    }
+    
+    // In/Out flow getters and setters
+    public boolean isInOutSelectionMode() {
+        return inOutSelectionMode;
+    }
+    
+    public void setInOutSelectionMode(boolean inOutSelectionMode) {
+        this.inOutSelectionMode = inOutSelectionMode;
+    }
+    
+    public boolean isAwaitingInOutDtoName() {
+        return awaitingInOutDtoName;
+    }
+    
+    public void setAwaitingInOutDtoName(boolean awaitingInOutDtoName) {
+        this.awaitingInOutDtoName = awaitingInOutDtoName;
+    }
+    
+    /**
+     * Clears all in/out flow flags and temporary data
+     */
+    public void clearInOutFlowData() {
+        this.inOutSelectionMode = false;
+        this.awaitingInOutDtoName = false;
+        this.formData.remove("inOutMode");
+        this.formData.remove("inOutComponent");
     }
 }

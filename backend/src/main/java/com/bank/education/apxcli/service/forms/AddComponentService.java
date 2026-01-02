@@ -6,20 +6,20 @@ import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service responsible for handling component type selection in "apx add" workflow
+ * Service responsible for handling "apx add" command workflow
+ * Manages component type selection menu (DTO, Transaction, Library)
  */
 @Service
-public class ComponentSelectionService {
+public class AddComponentService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final FormPromptService formPromptService;
     private Map<String, FormState> activeSessions;
     
-    public ComponentSelectionService(ArchitectureOrchestrationService architectureService,
-                                    FormPromptService formPromptService) {
+    public AddComponentService(ArchitectureOrchestrationService architectureService,
+                              FormPromptService formPromptService) {
         this.architectureService = architectureService;
         this.formPromptService = formPromptService;
     }

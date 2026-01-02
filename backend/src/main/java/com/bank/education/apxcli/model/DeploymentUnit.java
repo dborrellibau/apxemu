@@ -66,6 +66,24 @@ public class DeploymentUnit implements Containable {
     )
     private Set<DeploymentUnit> dependencies = new HashSet<>();
     
+    // Transaction inputs (DTOs used as input parameters)
+    @ManyToMany
+    @JoinTable(
+        name = "transaction_inputs",
+        joinColumns = @JoinColumn(name = "transaction_id"),
+        inverseJoinColumns = @JoinColumn(name = "dto_id")
+    )
+    private Set<DeploymentUnit> inputs = new HashSet<>();
+    
+    // Transaction outputs (DTOs returned as output)
+    @ManyToMany
+    @JoinTable(
+        name = "transaction_outputs",
+        joinColumns = @JoinColumn(name = "transaction_id"),
+        inverseJoinColumns = @JoinColumn(name = "dto_id")
+    )
+    private Set<DeploymentUnit> outputs = new HashSet<>();
+    
     // Constructors
     public DeploymentUnit() {
         this.createdAt = LocalDateTime.now();
@@ -176,6 +194,22 @@ public class DeploymentUnit implements Containable {
         this.dependencies = dependencies;
     }
     
+    public Set<DeploymentUnit> getInputs() {
+        return inputs;
+    }
+    
+    public void setInputs(Set<DeploymentUnit> inputs) {
+        this.inputs = inputs;
+    }
+    
+    public Set<DeploymentUnit> getOutputs() {
+        return outputs;
+    }
+    
+    public void setOutputs(Set<DeploymentUnit> outputs) {
+        this.outputs = outputs;
+    }
+    
     // Helper methods
     public void addDependency(DeploymentUnit dependency) {
         this.dependencies.add(dependency);
@@ -183,6 +217,22 @@ public class DeploymentUnit implements Containable {
     
     public void removeDependency(DeploymentUnit dependency) {
         this.dependencies.remove(dependency);
+    }
+    
+    public void addInput(DeploymentUnit dto) {
+        this.inputs.add(dto);
+    }
+    
+    public void removeInput(DeploymentUnit dto) {
+        this.inputs.remove(dto);
+    }
+    
+    public void addOutput(DeploymentUnit dto) {
+        this.outputs.add(dto);
+    }
+    
+    public void removeOutput(DeploymentUnit dto) {
+        this.outputs.remove(dto);
     }
     
     // NEW: Getter/Setter for parent DeploymentUnit

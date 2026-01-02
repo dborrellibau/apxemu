@@ -438,6 +438,49 @@ public class ContainableInfoService {
             }
         }
         
+        // Inputs/Outputs section - only for TRX components
+        if (component.getType() == DeploymentUnit.DeploymentUnitType.TRX) {
+            // Inputs
+            Set<DeploymentUnit> allInputs = component.getInputs();
+            if (allInputs != null) {
+                List<DeploymentUnit> inputs = new ArrayList<>();
+                for (DeploymentUnit input : allInputs) {
+                    // Trigger proxy initialization
+                    input.getName();
+                    if (!input.isDeleted()) {
+                        inputs.add(input);
+                    }
+                }
+                
+                output.append("\nInputs: ").append(inputs.size()).append("\n");
+                if (!inputs.isEmpty()) {
+                    for (DeploymentUnit input : inputs) {
+                        output.append("- ").append(input.getName()).append("\n");
+                    }
+                }
+            }
+            
+            // Outputs
+            Set<DeploymentUnit> allOutputs = component.getOutputs();
+            if (allOutputs != null) {
+                List<DeploymentUnit> outputs = new ArrayList<>();
+                for (DeploymentUnit outputDto : allOutputs) {
+                    // Trigger proxy initialization
+                    outputDto.getName();
+                    if (!outputDto.isDeleted()) {
+                        outputs.add(outputDto);
+                    }
+                }
+                
+                output.append("\nOutputs: ").append(outputs.size()).append("\n");
+                if (!outputs.isEmpty()) {
+                    for (DeploymentUnit outputDto : outputs) {
+                        output.append("- ").append(outputDto.getName()).append("\n");
+                    }
+                }
+            }
+        }
+        
         return output.toString();
     }
 }
