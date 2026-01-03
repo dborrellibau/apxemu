@@ -10,9 +10,25 @@ function App() {
 
   useEffect(() => {
     // Use the singleton instance directly
-    webSocketService.onConnect = () => {
+    webSocketService.onConnect = async () => {
       console.log('Connected to WebSocket');
       setIsConnected(true);
+      
+      // Load initial diagram data from REST endpoint
+      try {
+        console.log('Loading initial diagram data...');
+        const response = await fetch('/api/architecture/units');
+        
+        if (response.ok) {
+          const units = await response.json();
+          console.log('Initial data loaded:', units.length, 'root units');
+          setDiagramData(units);
+        } else {
+          console.error('Failed to load initial data:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Error loading initial diagram data:', error);
+      }
     };
 
     webSocketService.onDisconnect = () => {
