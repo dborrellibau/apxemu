@@ -260,6 +260,8 @@ public class DeletionCommandService {
             return handleComponentSelection(sessionState, input);
         } else if ("dependency-selection".equals(deletionStep)) {
             return handleDependencySelection(sessionState, input);
+        } else if ("inout-dto-input".equals(deletionStep)) {
+            return handleInOutDtoInput(sessionState, input);
         }
         
         // Unknown step
@@ -519,6 +521,245 @@ public class DeletionCommandService {
         return CommandResponse.success("Dependency relationship removed successfully:\n" +
             "  Component: " + componentName + "\n" +
             "  Removed dependency: " + dependencyName);
+    }
+    
+    /**
+     * Handles "apx del in" command for removing transaction inputs
+     */
+    public CommandResponse handleDeleteIn(FormState sessionState) {
+        String currentDir = sessionState.getCurrentDirectory();
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        String componentName = path.getComponentName();
+        
+        Optional<DeploymentUnit> transactionOpt = deploymentUnitRepository.findByName(componentName);
+        if (!transactionOpt.isPresent()) {
+            return CommandResponse.error("Transaction not found");
+        }
+        
+        DeploymentUnit transaction = transactionOpt.get();
+        
+        // Validate it's a TRX
+        if (transaction.getType() != DeploymentUnit.DeploymentUnitType.TRX) {
+            return CommandResponse.error("Error: The artifact is not a Transaction");
+        }
+        
+        // Check if has inputs
+        if (transaction.getInputs().isEmpty()) {
+            return CommandResponse.info("Transaction '" + componentName + "' has no input DTOs");
+        }
+        
+        // Show current inputs and request DTO name
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Current inputs:\n");
+        for (DeploymentUnit input : transaction.getInputs()) {
+            prompt.append("  - ").append(input.getName()).append("\n");
+        }
+        prompt.append("\n");
+        prompt.append("Enter input DTO name to remove: ");
+        
+        // Set state
+        sessionState.addData("inOutContext", "input");
+        sessionState.addData("inOutTransaction", componentName);
+        sessionState.addData("inOutTransactionId", transaction.getId().toString());
+        sessionState.addData("deletionStep", "inout-dto-input");
+        sessionState.setAwaitingDeletionSelection(true);
+        
+        return CommandResponse.info(prompt.toString());
+    }
+    
+    /**
+     * Handles "apx del out" command for removing transaction outputs
+     */
+    public CommandResponse handleDeleteOut(FormState sessionState) {
+        String currentDir = sessionState.getCurrentDirectory();
+        NavigationPath path = pathNavigationService.createPath(currentDir);
+        String componentName = path.getComponentName();
+        
+        Optional<DeploymentUnit> transactionOpt = deploymentUnitRepository.findByName(componentName);
+        if (!transactionOpt.isPresent()) {
+            return CommandResponse.error("Transaction not found");
+        }
+        
+        DeploymentUnit transaction = transactionOpt.get();
+        
+        // Validate it's a TRX
+        if (transaction.getType() != DeploymentUnit.DeploymentUnitType.TRX) {
+            return CommandResponse.error("Error: The artifact is not a Transaction");
+        }
+        
+        // Check if has outputs
+        if (transaction.getOutputs().isEmpty()) {
+            return CommandResponse.info("Transaction '" + componentName + "' has no output DTOs");
+        }
+        
+        // Show current outputs and request DTO name
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Current outputs:\n");
+        for (DeploymentUnit output : transaction.getOutputs()) {
+            prompt.append("  - ").append(output.getName()).append("\n");
+        }
+        prompt.append("\n");
+        prompt.append("Enter output DTO name to remove: ");
+        
+        // Set state
+        sessionState.addData("inOutContext", "output");
+        sessionState.addData("inOutTransaction", componentName);
+        sessionState.addData("inOutTransactionId", transaction.getId().toString());
+        sessionState.addData("deletionStep", "inout-dto-input");
+        sessionState.setAwaitingDeletionSelection(true);
+        
+        return CommandResponse.info(prompt.toString());
+    }
+    
+    /**
+     * Handles DTO name input for del in/del out
+     * Uses standard confirmation system
+     */
+    private CommandResponse handleInOutDtoInput(FormState sessionState, String dtoName) {
+        String transactionName = sessionState.getData("inOutTransaction");
+        String transactionId = sessionState.getData("inOutTransactionId");
+        String context = sessionState.getData("inOutContext"); // "input" or "output"
+        
+        dtoName = dtoName.trim();
+        
+        if (dtoName.isEmpty()) {
+            return CommandResponse.error("DTO name cannot be empty");
+        }
+        
+        // Find the DTO
+        Optional<DeploymentUnit> dtoOpt = deploymentUnitRepository.findByName(dtoName);
+        if (!dtoOpt.isPresent()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("DTO '" + dtoName + "' not found");
+        }
+        
+        DeploymentUnit dto = dtoOpt.get();
+        
+        // Verify DTO is in inputs/outputs list
+        Optional<DeploymentUnit> transactionOpt = deploymentUnitRepository.findById(Long.parseLong(transactionId));
+        if (!transactionOpt.isPresent()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Transaction not found");
+        }
+        
+        DeploymentUnit transaction = transactionOpt.get();
+        boolean found = false;
+        
+        if ("input".equals(context)) {
+            found = transaction.getInputs().contains(dto);
+        } else if ("output".equals(context)) {
+            found = transaction.getOutputs().contains(dto);
+        }
+        
+        if (!found) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("DTO '" + dtoName + "' is not in " + context + "s");
+        }
+        
+        // Store pending data for confirmation
+        sessionState.addData("pendingInOut_transactionId", transactionId);
+        sessionState.addData("pendingInOut_dtoId", dto.getId().toString());
+        sessionState.addData("pendingInOut_transactionName", transactionName);
+        sessionState.addData("pendingInOut_dtoName", dtoName);
+        sessionState.addData("pendingInOut_context", context);
+        
+        // Use standard confirmation system
+        String actionPrefix = "input".equals(context) ? "delete-input-" : "delete-output-";
+        sessionState.setAwaitingConfirmationFor(actionPrefix + transactionId + "-" + dto.getId());
+        
+        // Clear deletion flow
+        sessionState.clearDeletionFlowData();
+        
+        return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
+    }
+    
+    /**
+     * Executes confirmed input deletion
+     * Called by CommandParserService.handleConfirmation()
+     */
+    public CommandResponse executeConfirmedInputDelete(String action, FormState sessionState) {
+        String transactionId = sessionState.getData("pendingInOut_transactionId");
+        String dtoId = sessionState.getData("pendingInOut_dtoId");
+        String transactionName = sessionState.getData("pendingInOut_transactionName");
+        String dtoName = sessionState.getData("pendingInOut_dtoName");
+        
+        if (transactionId == null || dtoId == null) {
+            return CommandResponse.error("Missing input deletion data");
+        }
+        
+        Optional<DeploymentUnit> transactionOpt = deploymentUnitRepository.findById(Long.parseLong(transactionId));
+        Optional<DeploymentUnit> dtoOpt = deploymentUnitRepository.findById(Long.parseLong(dtoId));
+        
+        if (!transactionOpt.isPresent() || !dtoOpt.isPresent()) {
+            return CommandResponse.error("Transaction or DTO not found");
+        }
+        
+        DeploymentUnit transaction = transactionOpt.get();
+        DeploymentUnit dto = dtoOpt.get();
+        
+        // Remove input
+        transaction.removeInput(dto);
+        deploymentUnitRepository.save(transaction);
+        
+        // Notify diagram
+        diagramService.notifyDiagramUpdate();
+        
+        // Clean pending data
+        cleanupInOutPendingData(sessionState);
+        
+        return CommandResponse.success("Input removed successfully:\n" +
+            "  Transaction: " + transactionName + "\n" +
+            "  Removed input: " + dtoName);
+    }
+    
+    /**
+     * Executes confirmed output deletion
+     * Called by CommandParserService.handleConfirmation()
+     */
+    public CommandResponse executeConfirmedOutputDelete(String action, FormState sessionState) {
+        String transactionId = sessionState.getData("pendingInOut_transactionId");
+        String dtoId = sessionState.getData("pendingInOut_dtoId");
+        String transactionName = sessionState.getData("pendingInOut_transactionName");
+        String dtoName = sessionState.getData("pendingInOut_dtoName");
+        
+        if (transactionId == null || dtoId == null) {
+            return CommandResponse.error("Missing output deletion data");
+        }
+        
+        Optional<DeploymentUnit> transactionOpt = deploymentUnitRepository.findById(Long.parseLong(transactionId));
+        Optional<DeploymentUnit> dtoOpt = deploymentUnitRepository.findById(Long.parseLong(dtoId));
+        
+        if (!transactionOpt.isPresent() || !dtoOpt.isPresent()) {
+            return CommandResponse.error("Transaction or DTO not found");
+        }
+        
+        DeploymentUnit transaction = transactionOpt.get();
+        DeploymentUnit dto = dtoOpt.get();
+        
+        // Remove output
+        transaction.removeOutput(dto);
+        deploymentUnitRepository.save(transaction);
+        
+        // Notify diagram
+        diagramService.notifyDiagramUpdate();
+        
+        // Clean pending data
+        cleanupInOutPendingData(sessionState);
+        
+        return CommandResponse.success("Output removed successfully:\n" +
+            "  Transaction: " + transactionName + "\n" +
+            "  Removed output: " + dtoName);
+    }
+    
+    /**
+     * Helper to clean pending in/out data
+     */
+    private void cleanupInOutPendingData(FormState sessionState) {
+        sessionState.getFormData().remove("pendingInOut_transactionId");
+        sessionState.getFormData().remove("pendingInOut_dtoId");
+        sessionState.getFormData().remove("pendingInOut_transactionName");
+        sessionState.getFormData().remove("pendingInOut_dtoName");
+        sessionState.getFormData().remove("pendingInOut_context");
     }
     
     /**
