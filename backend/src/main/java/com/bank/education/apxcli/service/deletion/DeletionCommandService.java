@@ -46,43 +46,33 @@ public class DeletionCommandService {
      * Main entry point for "apx del" command
      * Detects navigation level and shows appropriate deletion menu
      * 
-     * ROOT: Show DU deletion menu (du-online/du-lib only)
-     * DU_ONLINE/DU_LIB: Show type selection menu (dep/dto/job/lib/trx/util)
-     * FOLDER: Show component selection from folder
-     * COMPONENT_*: Confirm deletion of specific component
+     * Only allowed from: DU_ONLINE or COMPONENT_*
      */
     public CommandResponse handleDeleteCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
-        
-        // ROOT: show DU deletion menu
-        if ("root".equals(currentDir)) {
-            return showRootDeletionMenu(sessionState);
-        }
-        
-        // Get PathType and NavigationPath
         PathType pathType = getCurrentPathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
-        if (pathType == PathType.DU_ONLINE || pathType == PathType.DU_LIB) {
-            // Level 1: DU - show type selection menu
+        // VALIDATION: Only allow from DU_ONLINE or COMPONENT_*
+        if (pathType == PathType.ROOT || 
+            pathType == PathType.DU_LIB || 
+            pathType == PathType.FOLDER) {
+            return CommandResponse.error("The 'del' command can only be executed from DU-ONLINE or within a component");
+        }
+        
+        if (pathType == PathType.DU_ONLINE) {
+            // From DU_ONLINE: show menu (dto/lib/trx valid, rest error)
             String duName = path.getDuName();
-            return showDUContextMenu(sessionState, duName);
-        } else if (pathType == PathType.FOLDER) {
-            // Level 2: folder - show component selection
-            String duName = path.getDuName();
-            String folderName = path.getFolderName();
-            return showFolderContextMenu(sessionState, duName, folderName);
+            return showDeletionMenu(sessionState, duName, pathType);
         } else if (pathType == PathType.COMPONENT_IN_FOLDER || 
                    pathType == PathType.COMPONENT_IN_DULIB || 
                    pathType == PathType.COMPONENT_STANDALONE) {
-            // Level 3: component - confirm deletion
-            String duName = path.getDuName();
-            String folderName = path.getFolderName();
+            // From COMPONENT: show menu (only dep valid, rest error)
             String componentName = path.getComponentName();
-            return showComponentDeletionConfirmation(sessionState, duName, folderName, componentName);
-        } else {
-            return CommandResponse.error("Invalid navigation level for deletion");
+            return showDeletionMenu(sessionState, componentName, pathType);
         }
+        
+        return CommandResponse.error("Invalid navigation level for deletion");
     }
     
     /**
@@ -110,20 +100,17 @@ public class DeletionCommandService {
         return CommandResponse.info(menu.toString());
     }
     
-    /**
-     * Level 1 (du-name): Show deletion type menu
-     * Options: 1. dep, 2. dto, 3. job, 4. lib, 5. trx, 6. util
+    /**     * Unified deletion menu for both DU_ONLINE and COMPONENT contexts
+     * Shows same menu options but validates differently based on PathType
+     * 
+     * @param sessionState current session state
+     * @param contextName name of DU or component
+     * @param pathType current path type (DU_ONLINE or COMPONENT_*)
      */
-    private CommandResponse showDUContextMenu(FormState sessionState, String duName) {
-        // Verify DU exists
-        DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
-        if (du == null) {
-            return CommandResponse.error("Deployment unit '" + duName + "' not found");
-        }
-        
+    private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
         StringBuilder menu = new StringBuilder();
         menu.append("╔══════════════════════════════════════════════════════════╗\n");
-        menu.append("║          ELIMINACIÓN EN: ").append(String.format("%-32s", duName)).append("║\n");
+        menu.append("║          ELIMINACIÓN EN: ").append(String.format("%-32s", contextName)).append("║\n");
         menu.append("╚══════════════════════════════════════════════════════════╝\n");
         menu.append("\n");
         menu.append("Seleccione el tipo de elemento a eliminar:\n");
@@ -137,9 +124,13 @@ public class DeletionCommandService {
         menu.append("\n");
         menu.append("Ingrese el número de opción o el tipo: ");
         
-        // Set deletion context
-        sessionState.addData("deletionContext", "du-level");
-        sessionState.addData("deletionDU", duName);
+        // Store context based on PathType
+        sessionState.addData("deletionPathType", pathType.name());
+        if (pathType == PathType.DU_ONLINE) {
+            sessionState.addData("deletionDU", contextName);
+        } else {
+            sessionState.addData("deletionComponent", contextName);
+        }
         sessionState.addData("deletionStep", "type-selection");
         sessionState.setAwaitingDeletionSelection(true);
         
