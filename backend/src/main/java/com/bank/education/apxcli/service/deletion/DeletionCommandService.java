@@ -249,10 +249,9 @@ public class DeletionCommandService {
     @Transactional
     public CommandResponse handleDeletionSelection(FormState sessionState, String input) {
         String deletionStep = sessionState.getData("deletionStep");
-        String deletionContext = sessionState.getData("deletionContext");
         
         if ("type-selection".equals(deletionStep)) {
-            return handleTypeSelection(sessionState, input, deletionContext);
+            return handleTypeSelection(sessionState, input);
         } else if ("component-selection".equals(deletionStep)) {
             return handleComponentSelection(sessionState, input);
         }
@@ -263,60 +262,66 @@ public class DeletionCommandService {
     }
     
     /**
-     * Handle type selection (root or du-level context)
+     * Handle type selection based on PathType context
+     * Validates allowed types based on where command was executed
      */
-    private CommandResponse handleTypeSelection(FormState sessionState, String input, String context) {
+    private CommandResponse handleTypeSelection(FormState sessionState, String input) {
         String inputLower = input.trim().toLowerCase();
         String selectedType = null;
         
-        if ("root".equals(context)) {
-            // Map input to DU type
-            if ("1".equals(inputLower) || "du-online".equals(inputLower)) {
-                selectedType = "du-online";
-            } else if ("2".equals(inputLower) || "du-lib".equals(inputLower)) {
-                selectedType = "du-lib";
-            } else {
-                return CommandResponse.error("Invalid option. Please enter 1, 2, or the type name (du-online, du-lib)");
-            }
-            
-            // Show list of DUs of this type
-            return showDUListForDeletion(sessionState, selectedType);
-            
-        } else if ("du-level".equals(context)) {
-            // Map input to component type or special type
-            if ("1".equals(inputLower) || "dep".equals(inputLower)) {
-                selectedType = "dep";
-            } else if ("2".equals(inputLower) || "dto".equals(inputLower)) {
-                selectedType = "dto";
-            } else if ("3".equals(inputLower) || "job".equals(inputLower)) {
-                selectedType = "job";
-            } else if ("4".equals(inputLower) || "lib".equals(inputLower)) {
-                selectedType = "lib";
-            } else if ("5".equals(inputLower) || "trx".equals(inputLower)) {
-                selectedType = "trx";
-            } else if ("6".equals(inputLower) || "util".equals(inputLower)) {
-                selectedType = "util";
-            } else {
-                return CommandResponse.error("Invalid option. Please enter 1-6 or the type name (dep/dto/job/lib/trx/util)");
-            }
-            
-            String duName = sessionState.getData("deletionDU");
-            
-            // Handle special types (dep, job, util)
+        // Parse input to type
+        if ("1".equals(inputLower) || "dep".equals(inputLower)) {
+            selectedType = "dep";
+        } else if ("2".equals(inputLower) || "dto".equals(inputLower)) {
+            selectedType = "dto";
+        } else if ("3".equals(inputLower) || "job".equals(inputLower)) {
+            selectedType = "job";
+        } else if ("4".equals(inputLower) || "lib".equals(inputLower)) {
+            selectedType = "lib";
+        } else if ("5".equals(inputLower) || "trx".equals(inputLower)) {
+            selectedType = "trx";
+        } else if ("6".equals(inputLower) || "util".equals(inputLower)) {
+            selectedType = "util";
+        } else {
+            return CommandResponse.error("Invalid option. Please enter 1-6 or the type name (dep/dto/job/lib/trx/util)");
+        }
+        
+        // Get PathType from context
+        String pathTypeStr = sessionState.getData("deletionPathType");
+        PathType pathType = PathType.valueOf(pathTypeStr);
+        
+        // VALIDATION BASED ON PATHTYPE
+        if (pathType == PathType.DU_ONLINE) {
+            // From DU_ONLINE: only dto, lib, trx are valid
             if ("dep".equals(selectedType)) {
-                return showDependencyListForDeletion(sessionState, duName);
-            } else if ("job".equals(selectedType) || "util".equals(selectedType)) {
-                // JOB and UTIL are strings only for now (Opción A)
                 sessionState.clearDeletionFlowData();
-                return CommandResponse.error("Deletion of " + selectedType.toUpperCase() + " not yet implemented (reserved for future)");
+                return CommandResponse.error("Dependencies cannot be managed at DU level. Navigate to a component.");
+            } else if ("job".equals(selectedType) || "util".equals(selectedType)) {
+                sessionState.clearDeletionFlowData();
+                return CommandResponse.error("Not implemented yet");
             }
             
-            // Handle folder types (dto, lib, trx)
+            // dto, lib, trx → show component list
+            String duName = sessionState.getData("deletionDU");
             return showComponentListForType(sessionState, duName, selectedType);
+            
+        } else if (pathType == PathType.COMPONENT_IN_FOLDER || 
+                   pathType == PathType.COMPONENT_IN_DULIB || 
+                   pathType == PathType.COMPONENT_STANDALONE) {
+            // From COMPONENT: only dep is valid
+            if (!"dep".equals(selectedType)) {
+                sessionState.clearDeletionFlowData();
+                return CommandResponse.error("Not implemented yet");
+            }
+            
+            // dep → show dependency list for component (TODO FASE 5)
+            String componentName = sessionState.getData("deletionComponent");
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Dependency deletion from component not yet implemented");
         }
         
         sessionState.clearDeletionFlowData();
-        return CommandResponse.error("Unknown context");
+        return CommandResponse.error("Invalid context");
     }
     
     /**
