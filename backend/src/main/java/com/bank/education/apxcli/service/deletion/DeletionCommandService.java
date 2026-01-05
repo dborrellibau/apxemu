@@ -54,7 +54,7 @@ public class DeletionCommandService {
      */
     public CommandResponse handleDeleteCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
-        PathType pathType = getCurrentPathType(currentDir);
+        PathType pathType = pathNavigationService.resolvePathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
         // VALIDATION: Only allow from DU_ONLINE or COMPONENT_*
@@ -829,18 +829,5 @@ public class DeletionCommandService {
         message.append("remember to remove those dependencies manually.");
         
         return CommandResponse.success(message.toString());
-    }
-    
-    /**
-     * Helper method to get PathType from currentDirectory string.
-     * Converts legacy string format to PathType.
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
-            return PathType.ROOT;
-        }
-        
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path != null ? path.getType() : PathType.ROOT;
     }
 }
