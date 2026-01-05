@@ -80,31 +80,7 @@ public class DeletionCommandService {
     }
     
     /**
-     * Level 0 (root): Show DU deletion menu
-     * Options: 1. du-online, 2. du-lib
-     */
-    private CommandResponse showRootDeletionMenu(FormState sessionState) {
-        StringBuilder menu = new StringBuilder();
-        menu.append("╔══════════════════════════════════════════════════════════╗\n");
-        menu.append("║          ELIMINACIÓN DE DEPLOYMENT UNIT                  ║\n");
-        menu.append("╚══════════════════════════════════════════════════════════╝\n");
-        menu.append("\n");
-        menu.append("Seleccione el tipo de deployment unit a eliminar:\n");
-        menu.append("\n");
-        menu.append("  1. du-online    - Online Deployment Unit\n");
-        menu.append("  2. du-lib       - Library Deployment Unit\n");
-        menu.append("\n");
-        menu.append("Ingrese el número de opción o el tipo: ");
-        
-        // Set deletion context
-        sessionState.addData("deletionContext", "root");
-        sessionState.addData("deletionStep", "type-selection");
-        sessionState.setAwaitingDeletionSelection(true);
-        
-        return CommandResponse.info(menu.toString());
-    }
-    
-    /**     * Unified deletion menu for both DU_ONLINE and COMPONENT contexts
+     * Unified deletion menu for both DU_ONLINE and COMPONENT contexts
      * Shows same menu options but validates differently based on PathType
      * 
      * @param sessionState current session state
@@ -113,10 +89,6 @@ public class DeletionCommandService {
      */
     private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
         StringBuilder menu = new StringBuilder();
-        menu.append("╔══════════════════════════════════════════════════════════╗\n");
-        menu.append("║          ELIMINACIÓN EN: ").append(String.format("%-32s", contextName)).append("║\n");
-        menu.append("╚══════════════════════════════════════════════════════════╝\n");
-        menu.append("\n");
         menu.append("Seleccione el tipo de elemento a eliminar:\n");
         menu.append("\n");
         menu.append("  1. dep     - Dependencia\n");
@@ -175,26 +147,15 @@ public class DeletionCommandService {
             return CommandResponse.error("No components found in folder '" + folderName + "'");
         }
         
-        // Build selection menu
+        // Build selection list
         StringBuilder menu = new StringBuilder();
-        menu.append("╔══════════════════════════════════════════════════════════╗\n");
-        menu.append("║          SELECCIONAR COMPONENTE A ELIMINAR               ║\n");
-        menu.append("╚══════════════════════════════════════════════════════════╝\n");
-        menu.append("\n");
-        menu.append("Ubicación: ").append(duName).append("/").append(folderName).append("\n");
-        menu.append("\n");
         
         for (int i = 0; i < components.size(); i++) {
             DeploymentUnit component = components.get(i);
-            menu.append(String.format("  %d. %s", i + 1, component.getName()));
-            if (component.getDescription() != null && !component.getDescription().isEmpty()) {
-                menu.append(" - ").append(component.getDescription());
-            }
-            menu.append("\n");
+            menu.append(String.format("  %d. %s\n", i + 1, component.getName()));
         }
         
-        menu.append("\n");
-        menu.append("Ingrese el número o nombre del componente: ");
+        menu.append("\nEnter component number or name: ");
         
         // Store context for next step
         sessionState.addData("deletionContext", "folder-level");
@@ -222,28 +183,10 @@ public class DeletionCommandService {
             return CommandResponse.error("Component '" + componentName + "' is already marked as deleted");
         }
         
-        // Build confirmation message
-        StringBuilder message = new StringBuilder();
-        message.append("╔══════════════════════════════════════════════════════════╗\n");
-        message.append("║          CONFIRMACIÓN DE ELIMINACIÓN                     ║\n");
-        message.append("╚══════════════════════════════════════════════════════════╝\n");
-        message.append("\n");
-        message.append("Componente: ").append(componentName).append("\n");
-        message.append("Ubicación: ").append(duName).append("/").append(folderName).append("\n");
-        message.append("Tipo: ").append(component.getType().getValue()).append("\n");
-        if (component.getDescription() != null) {
-            message.append("Descripción: ").append(component.getDescription()).append("\n");
-        }
-        message.append("\n");
-        message.append("\u001B[33mNOTA: Si este elemento es dependencia de otro, recordá eliminar\n");
-        message.append("      la dependencia manualmente con el comando apropiado.\u001B[0m\n");
-        message.append("\n");
-        message.append("¿Confirmar eliminación? (Y/n): ");
-        
         // Set confirmation flag with action string
         sessionState.setAwaitingConfirmationFor("delete-component-" + component.getId());
         
-        return CommandResponse.info(message.toString());
+        return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
     }
     
     /**
@@ -392,10 +335,6 @@ public class DeletionCommandService {
         }
         
         StringBuilder menu = new StringBuilder();
-        menu.append("╔══════════════════════════════════════════════════════════╗\n");
-        menu.append("║          DEPENDENCIAS DE: ").append(String.format("%-30s", componentName)).append("║\n");
-        menu.append("╚══════════════════════════════════════════════════════════╝\n");
-        menu.append("\n");
         
         List<DeploymentUnit> depList = new ArrayList<>(dependencies);
         for (int i = 0; i < depList.size(); i++) {
@@ -768,24 +707,6 @@ public class DeletionCommandService {
     }
     
     /**
-     * Show list of DUs for deletion (root context)
-     */
-    private CommandResponse showDUListForDeletion(FormState sessionState, String duType) {
-        // TODO ETAPA 5: List DUs by type
-        sessionState.clearDeletionFlowData();
-        return CommandResponse.error("DU listing for deletion not yet implemented");
-    }
-    
-    /**
-     * Show list of dependencies for deletion (du-level context, dep option)
-     */
-    private CommandResponse showDependencyListForDeletion(FormState sessionState, String duName) {
-        // TODO ETAPA 5: List dependencies
-        sessionState.clearDeletionFlowData();
-        return CommandResponse.error("Dependency deletion not yet implemented");
-    }
-    
-    /**
      * Show list of components by type (dto/lib/trx)
      */
     private CommandResponse showComponentListForType(FormState sessionState, String duName, String folderType) {
@@ -843,20 +764,6 @@ public class DeletionCommandService {
         }
     }
     
-    /**
-     * Helper: Get all dependencies in a DU
-     */
-    private List<DeploymentUnit> getDependenciesInDU(String duName) {
-        DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
-        if (du == null) {
-            return new java.util.ArrayList<>();
-        }
-        
-        // Return non-deleted dependencies
-        return du.getDependencies().stream()
-            .filter(dep -> !dep.isDeleted())
-            .collect(java.util.stream.Collectors.toList());
-    }
     
     /**
      * ETAPA 6: Execute confirmed deletion (soft delete)
@@ -918,12 +825,8 @@ public class DeletionCommandService {
         // Build success message
         StringBuilder message = new StringBuilder();
         message.append("✓ Component successfully marked as deleted\n");
-        message.append("\n");
-        message.append("Component: ").append(componentName).append("\n");
-        message.append("Type: ").append(componentType).append("\n");
-        message.append("\n");
-        message.append("\u001B[33mNOTE: If this component is referenced as a dependency elsewhere,\n");
-        message.append("remember to remove those dependencies manually.\u001B[0m");
+        message.append("NOTE: If this component is referenced as a dependency elsewhere,\n");
+        message.append("remember to remove those dependencies manually.");
         
         return CommandResponse.success(message.toString());
     }
