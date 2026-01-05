@@ -527,6 +527,7 @@ public class DeletionCommandService {
     /**
      * Handles "apx del in" command for removing transaction inputs
      */
+    @Transactional(readOnly = true)
     public CommandResponse handleDeleteIn(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         NavigationPath path = pathNavigationService.createPath(currentDir);
@@ -571,6 +572,7 @@ public class DeletionCommandService {
     /**
      * Handles "apx del out" command for removing transaction outputs
      */
+    @Transactional(readOnly = true)
     public CommandResponse handleDeleteOut(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         NavigationPath path = pathNavigationService.createPath(currentDir);
