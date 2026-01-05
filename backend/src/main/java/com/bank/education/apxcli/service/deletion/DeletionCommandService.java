@@ -479,6 +479,7 @@ public class DeletionCommandService {
      * @param action format: "delete-dependency-{componentId}-{dependencyId}"
      * @param sessionState session state with pending data
      */
+    @Transactional
     public CommandResponse executeConfirmedDependencyDelete(String action, FormState sessionState) {
         // Parse action string
         if (!action.startsWith("delete-dependency-")) {
@@ -677,6 +678,7 @@ public class DeletionCommandService {
      * Executes confirmed input deletion
      * Called by CommandParserService.handleConfirmation()
      */
+    @Transactional
     public CommandResponse executeConfirmedInputDelete(String action, FormState sessionState) {
         String transactionId = sessionState.getData("pendingInOut_transactionId");
         String dtoId = sessionState.getData("pendingInOut_dtoId");
@@ -716,6 +718,7 @@ public class DeletionCommandService {
      * Executes confirmed output deletion
      * Called by CommandParserService.handleConfirmation()
      */
+    @Transactional
     public CommandResponse executeConfirmedOutputDelete(String action, FormState sessionState) {
         String transactionId = sessionState.getData("pendingInOut_transactionId");
         String dtoId = sessionState.getData("pendingInOut_dtoId");

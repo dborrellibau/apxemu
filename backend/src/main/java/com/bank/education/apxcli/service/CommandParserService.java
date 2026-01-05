@@ -241,7 +241,7 @@ public class CommandParserService {
                 if (!permissionService.canCreateDeploymentUnit(currentType)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
                 } else {
-                    response = systemCommandService.handleInitCommand(subArgs);
+                    response = systemCommandService.handleInitCommand(subArgs, sessionState);
                 }
                 break;
             case "add":
