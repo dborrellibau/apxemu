@@ -23,10 +23,10 @@ public class ArtifactIdValidationService {
     public static final String TYPE_TRX = "TRX";
     
     // Regex patterns for each component type
-    private static final Pattern DTO_PATTERN = Pattern.compile("^[A-Z]{4}C\\d{3}$");
-    private static final Pattern LIB_PATTERN = Pattern.compile("^[A-Z]{4}R\\d{3}$");
-    private static final Pattern LIB_IMPL_PATTERN = Pattern.compile("^[A-Z]{4}R\\d{3}IMPL$");
-    private static final Pattern TRX_PATTERN = Pattern.compile("^[A-Z]{4}T\\d{3}-\\d{2}-[A-Z]{2}$");
+    private static final Pattern DTO_PATTERN = Pattern.compile("^[A-Z]{4}C\\d{3}$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LIB_PATTERN = Pattern.compile("^[A-Z]{4}R\\d{3}$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LIB_IMPL_PATTERN = Pattern.compile("^[A-Z]{4}R\\d{3}IMPL$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TRX_PATTERN = Pattern.compile("^[A-Z]{4}T\\d{3}-\\d{2}-[A-Z]{2}$", Pattern.CASE_INSENSITIVE);
     
     /**
      * Validates an artifact ID against the expected pattern for a component type

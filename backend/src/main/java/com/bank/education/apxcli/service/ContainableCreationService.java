@@ -186,7 +186,7 @@ public class ContainableCreationService {
                 return uuaa + "R" + code + "IMPL";
             case TRX:
                 String ver = version != null ? version : "01";
-                String ctry = country != null ? country : "GL";
+                String ctry = country != null ? country.toUpperCase() : "GL";
                 return uuaa + "T" + code + "-" + ver + "-" + ctry;
             case DU_LIB:
                 return uuaa + "R" + code + "-parent";
