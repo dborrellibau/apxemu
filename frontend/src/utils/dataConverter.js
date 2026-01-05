@@ -10,13 +10,16 @@ export const convertToReactFlow = (hierarchicalData) => {
   const edges = [];
   let nodeId = 1;
   
-  const processContainer = (container, parentId = null, level = 0) => {
+  const processContainer = (container, parentId = null, level = 0, parentPath = '') => {
     // ETAPA 8: Skip deleted components
     if (container.deleted === true) {
       return null; // Don't process deleted containers
     }
     
     const currentNodeId = `node-${nodeId++}`;
+    
+    // Build full hierarchical path for unique identification
+    const fullPath = parentPath ? `${parentPath}/${container.name}` : container.name;
     
     // Create node
     const node = {
@@ -26,6 +29,7 @@ export const convertToReactFlow = (hierarchicalData) => {
       data: {
         id: container.id,
         name: container.name,
+        fullPath: fullPath, // Unique path for position storage
         type: container.entityType,
         deploymentUnitType: container.deploymentUnitType,
         folderType: container.folderType,
@@ -68,7 +72,7 @@ export const convertToReactFlow = (hierarchicalData) => {
     // Process children recursively
     if (container.children && container.children.length > 0) {
       container.children.forEach(child => {
-        processContainer(child, currentNodeId, level + 1);
+        processContainer(child, currentNodeId, level + 1, fullPath);
         // Note: deleted children will be filtered out automatically in processContainer
       });
     }

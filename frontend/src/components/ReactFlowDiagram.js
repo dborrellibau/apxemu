@@ -51,28 +51,29 @@ const ReactFlowDiagram = ({ data }) => {
     }
     
     // Caso 2: Con datos, limpiar huérfanos (nodos eliminados)
-    const currentNodeNames = new Set();
+    const currentNodePaths = new Set();
     
-    const extractNames = (containers) => {
+    const extractPaths = (containers, parentPath = '') => {
       containers.forEach(container => {
         if (!container.deleted) {
-          currentNodeNames.add(container.name);
+          const fullPath = parentPath ? `${parentPath}/${container.name}` : container.name;
+          currentNodePaths.add(fullPath);
           if (container.children) {
-            extractNames(container.children);
+            extractPaths(container.children, fullPath);
           }
         }
       });
     };
     
-    extractNames(data);
+    extractPaths(data);
     
     // Filtrar solo posiciones de nodos que existen actualmente
     const validPositions = {};
     let foundOrphan = false;
     
-    Object.entries(persistedPositions).forEach(([name, pos]) => {
-      if (currentNodeNames.has(name)) {
-        validPositions[name] = pos;
+    Object.entries(persistedPositions).forEach(([path, pos]) => {
+      if (currentNodePaths.has(path)) {
+        validPositions[path] = pos;
       } else {
         foundOrphan = true;
       }
@@ -115,7 +116,7 @@ const ReactFlowDiagram = ({ data }) => {
     // Merge saved positions: use persisted position if exists, otherwise use calculated
     const mergedNodes = nodes.map(node => ({
       ...node,
-      position: savedPositions[node.data.name] || node.position
+      position: savedPositions[node.data.fullPath] || node.position
     }));
     
     return { nodes: mergedNodes, edges };
@@ -152,8 +153,8 @@ const ReactFlowDiagram = ({ data }) => {
       const updatedPositions = {};
       
       nodes.forEach(node => {
-        if (node.data?.name) {
-          updatedPositions[node.data.name] = {
+        if (node.data?.fullPath) {
+          updatedPositions[node.data.fullPath] = {
             x: Math.round(node.position.x),
             y: Math.round(node.position.y)
           };

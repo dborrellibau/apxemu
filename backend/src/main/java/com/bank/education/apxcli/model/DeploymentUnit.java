@@ -3,6 +3,7 @@ package com.bank.education.apxcli.model;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
@@ -56,7 +57,7 @@ public class DeploymentUnit implements Containable {
     
     // Component folders (for containers like DU-ONLINE, DU-LIB)
     @OneToMany(mappedBy = "parentDeploymentUnit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<ComponentFolder> componentFolders = new HashSet<>();
+    private Set<ComponentFolder> componentFolders = new LinkedHashSet<>();
     
     @ManyToMany
     @JoinTable(

@@ -39,7 +39,9 @@ class WebSocketService {
       }
       
       this.client = new Client({
-        webSocketFactory: () => new SockJS('/ws'),
+        webSocketFactory: () => new SockJS('/ws', null, {
+          timeout: 7000 // Increase timeout slightly for more stable connection
+        }),
         debug: () => {}, // Disable debug logging
         reconnectDelay: this.reconnectInterval,
         onConnect: (frame) => {
