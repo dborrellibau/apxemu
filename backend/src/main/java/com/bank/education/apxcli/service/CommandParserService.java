@@ -413,8 +413,11 @@ public class CommandParserService {
         // Accept confirmation: Y, y, or Enter (empty)
         if ("y".equals(inputLower) || input.trim().isEmpty()) {
             // Dispatch to appropriate service based on action prefix
-            if (action.startsWith("delete-")) {
+            if (action.startsWith("delete-component-")) {
                 return deletionCommandService.executeConfirmedDelete(action, sessionState);
+            }
+            if (action.startsWith("delete-dependency-")) {
+                return deletionCommandService.executeConfirmedDependencyDelete(action, sessionState);
             }
             if (action.startsWith("create-component-")) {
                 return formProcessingService.executeConfirmedCreate(action, sessionState);
@@ -450,6 +453,12 @@ public class CommandParserService {
         // Clean up pending dependency data (from apx add dep)
         sessionState.getFormData().remove("pendingDep_source");
         sessionState.getFormData().remove("pendingDep_target");
+        
+        // Clean up pending deletion dependency data (from apx del dep)
+        sessionState.getFormData().remove("pendingDelDep_componentId");
+        sessionState.getFormData().remove("pendingDelDep_dependencyId");
+        sessionState.getFormData().remove("pendingDelDep_componentName");
+        sessionState.getFormData().remove("pendingDelDep_dependencyName");
     }
     
     private CommandResponse showHelp() {

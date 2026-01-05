@@ -9,10 +9,14 @@ import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.DiagramService;
+import com.bank.education.apxcli.util.ConfirmationMessages;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Service for handling "apx del" interactive deletion command
@@ -254,6 +258,8 @@ public class DeletionCommandService {
             return handleTypeSelection(sessionState, input);
         } else if ("component-selection".equals(deletionStep)) {
             return handleComponentSelection(sessionState, input);
+        } else if ("dependency-selection".equals(deletionStep)) {
+            return handleDependencySelection(sessionState, input);
         }
         
         // Unknown step
@@ -314,10 +320,9 @@ public class DeletionCommandService {
                 return CommandResponse.error("Not implemented yet");
             }
             
-            // dep → show dependency list for component (TODO FASE 5)
+            // dep → show dependency list for component
             String componentName = sessionState.getData("deletionComponent");
-            sessionState.clearDeletionFlowData();
-            return CommandResponse.error("Dependency deletion from component not yet implemented");
+            return showDependencyListForComponent(sessionState, componentName);
         }
         
         sessionState.clearDeletionFlowData();
@@ -363,6 +368,157 @@ public class DeletionCommandService {
         // Clear deletion flow and show confirmation
         sessionState.clearDeletionFlowData();
         return showComponentDeletionConfirmation(sessionState, duName, folderName, selectedComponent.getName());
+    }
+    
+    /**
+     * Shows numbered list of dependencies for a component
+     * Used when executing "apx del" from component context and selecting "dep"
+     */
+    private CommandResponse showDependencyListForComponent(FormState sessionState, String componentName) {
+        Optional<DeploymentUnit> componentOpt = deploymentUnitRepository.findByName(componentName);
+        if (!componentOpt.isPresent()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Component '" + componentName + "' not found");
+        }
+        
+        DeploymentUnit component = componentOpt.get();
+        Set<DeploymentUnit> dependencies = component.getDependencies();
+        
+        if (dependencies.isEmpty()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.info("Component '" + componentName + "' has no dependencies");
+        }
+        
+        StringBuilder menu = new StringBuilder();
+        menu.append("╔══════════════════════════════════════════════════════════╗\n");
+        menu.append("║          DEPENDENCIAS DE: ").append(String.format("%-30s", componentName)).append("║\n");
+        menu.append("╚══════════════════════════════════════════════════════════╝\n");
+        menu.append("\n");
+        
+        List<DeploymentUnit> depList = new ArrayList<>(dependencies);
+        for (int i = 0; i < depList.size(); i++) {
+            DeploymentUnit dep = depList.get(i);
+            menu.append(String.format("  %d. %-20s [%s]\n", 
+                i + 1, 
+                dep.getName(), 
+                dep.getType().getValue()
+            ));
+        }
+        
+        menu.append("\n");
+        menu.append("Select dependency to remove (number or name): ");
+        
+        sessionState.addData("deletionStep", "dependency-selection");
+        sessionState.addData("deletionDependencyCount", String.valueOf(depList.size()));
+        
+        return CommandResponse.info(menu.toString());
+    }
+    
+    /**
+     * Handles dependency selection from list
+     * Uses standard confirmation system
+     */
+    private CommandResponse handleDependencySelection(FormState sessionState, String input) {
+        String componentName = sessionState.getData("deletionComponent");
+        int depCount = Integer.parseInt(sessionState.getData("deletionDependencyCount"));
+        
+        Optional<DeploymentUnit> componentOpt = deploymentUnitRepository.findByName(componentName);
+        if (!componentOpt.isPresent()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Component not found");
+        }
+        
+        DeploymentUnit component = componentOpt.get();
+        List<DeploymentUnit> dependencies = new ArrayList<>(component.getDependencies());
+        
+        // Parse selection (number or name)
+        DeploymentUnit selectedDep = null;
+        String inputTrimmed = input.trim();
+        
+        // Try as number first
+        try {
+            int selection = Integer.parseInt(inputTrimmed);
+            if (selection >= 1 && selection <= depCount) {
+                selectedDep = dependencies.get(selection - 1);
+            }
+        } catch (NumberFormatException e) {
+            // Try as name
+            for (DeploymentUnit dep : dependencies) {
+                if (dep.getName().equalsIgnoreCase(inputTrimmed)) {
+                    selectedDep = dep;
+                    break;
+                }
+            }
+        }
+        
+        if (selectedDep == null) {
+            return CommandResponse.error("Error: The dependency '" + inputTrimmed + "' is not found");
+        }
+        
+        // Store pending data for confirmation
+        sessionState.addData("pendingDelDep_componentId", component.getId().toString());
+        sessionState.addData("pendingDelDep_dependencyId", selectedDep.getId().toString());
+        sessionState.addData("pendingDelDep_componentName", component.getName());
+        sessionState.addData("pendingDelDep_dependencyName", selectedDep.getName());
+        
+        // Use standard confirmation system
+        sessionState.setAwaitingConfirmationFor("delete-dependency-" + component.getId() + "-" + selectedDep.getId());
+        
+        // Clear deletion flow (now in confirmation)
+        sessionState.clearDeletionFlowData();
+        
+        return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
+    }
+    
+    /**
+     * Executes confirmed dependency deletion
+     * Called by CommandParserService.handleConfirmation()
+     * 
+     * @param action format: "delete-dependency-{componentId}-{dependencyId}"
+     * @param sessionState session state with pending data
+     */
+    public CommandResponse executeConfirmedDependencyDelete(String action, FormState sessionState) {
+        // Parse action string
+        if (!action.startsWith("delete-dependency-")) {
+            return CommandResponse.error("Invalid deletion action format: " + action);
+        }
+        
+        String componentId = sessionState.getData("pendingDelDep_componentId");
+        String dependencyId = sessionState.getData("pendingDelDep_dependencyId");
+        String componentName = sessionState.getData("pendingDelDep_componentName");
+        String dependencyName = sessionState.getData("pendingDelDep_dependencyName");
+        
+        if (componentId == null || dependencyId == null) {
+            return CommandResponse.error("Missing dependency deletion data");
+        }
+        
+        // Find component and dependency
+        Optional<DeploymentUnit> componentOpt = deploymentUnitRepository.findById(Long.parseLong(componentId));
+        Optional<DeploymentUnit> dependencyOpt = deploymentUnitRepository.findById(Long.parseLong(dependencyId));
+        
+        if (!componentOpt.isPresent() || !dependencyOpt.isPresent()) {
+            return CommandResponse.error("Component or dependency not found");
+        }
+        
+        DeploymentUnit component = componentOpt.get();
+        DeploymentUnit dependency = dependencyOpt.get();
+        
+        // Remove ONLY the relationship (no soft delete of artifact)
+        component.removeDependency(dependency);
+        deploymentUnitRepository.save(component);
+        
+        // Notify diagram
+        diagramService.notifyDiagramUpdate();
+        
+        // Clean pending data
+        sessionState.getFormData().remove("pendingDelDep_componentId");
+        sessionState.getFormData().remove("pendingDelDep_dependencyId");
+        sessionState.getFormData().remove("pendingDelDep_componentName");
+        sessionState.getFormData().remove("pendingDelDep_dependencyName");
+        
+        return CommandResponse.success("Dependency relationship removed successfully:\n" +
+            "  Component: " + componentName + "\n" +
+            "  Removed dependency: " + dependencyName);
     }
     
     /**
