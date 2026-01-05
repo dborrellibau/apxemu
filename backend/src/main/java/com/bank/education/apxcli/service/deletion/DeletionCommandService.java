@@ -117,33 +117,11 @@ public class DeletionCommandService {
      * Level 2 (du-name/folder): Show component list from folder
      */
     private CommandResponse showFolderContextMenu(FormState sessionState, String duName, String folderName) {
-        System.out.println("=== DEBUG showFolderContextMenu ===");
-        System.out.println("duName: " + duName);
-        System.out.println("folderName: " + folderName);
-        
         // Get all components in this folder
         List<DeploymentUnit> components = getComponentsInFolder(duName, folderName);
-        System.out.println("Components found: " + components.size());
         
         if (components.isEmpty()) {
-            System.out.println("No components found - showing debug message");
-            sessionState.clearDeletionFlowData(); // Clear state on error
-            
-            // Debug: Show what folders exist
-            DeploymentUnit du = deploymentUnitRepository.findByName(duName).orElse(null);
-            if (du != null) {
-                StringBuilder debugMsg = new StringBuilder();
-                debugMsg.append("No components found in folder '").append(folderName).append("'.\n\n");
-                debugMsg.append("Available folders in ").append(duName).append(":\n");
-                for (com.bank.education.apxcli.model.ComponentFolder folder : du.getComponentFolders()) {
-                    debugMsg.append("  - ").append(folder.getType().name()).append(" (")
-                            .append(folder.getContainedUnits().size()).append(" components)\n");
-                }
-                System.out.println("Debug message to send: " + debugMsg.toString());
-                return CommandResponse.error(debugMsg.toString());
-            }
-            
-            System.out.println("DU not found - returning generic error");
+            sessionState.clearDeletionFlowData();
             return CommandResponse.error("No components found in folder '" + folderName + "'");
         }
         
