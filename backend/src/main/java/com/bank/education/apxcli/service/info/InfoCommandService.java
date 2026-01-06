@@ -31,11 +31,6 @@ public class InfoCommandService {
         this.pathNavigationService = pathNavigationService;
     }
     
-    public CommandResponse handleListCommand(String[] args) {
-        String type = args.length > 0 ? args[0] : null;
-        return architectureService.listDeploymentUnits(type);
-    }
-    
     /**
      * Context-aware show command (ETAPA 10 - refactored with PathNavigationService)
      * - ROOT: NOT AVAILABLE - returns error

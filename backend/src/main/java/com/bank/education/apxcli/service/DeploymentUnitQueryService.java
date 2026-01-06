@@ -85,49 +85,6 @@ public class DeploymentUnitQueryService {
     }
     
     /**
-     * Gets all deployment units (raw entities)
-     */
-    public List<DeploymentUnit> getAllDeploymentUnitsRaw() {
-        return repository.findAll();
-    }
-    
-    /**
-     * Searches deployment units by name pattern
-     */
-    public List<DeploymentUnit> searchDeploymentUnitsByName(String namePattern) {
-        return repository.findAll().stream()
-            .filter(unit -> unit.getName().toLowerCase().contains(namePattern.toLowerCase()))
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units by UUAA
-     */
-    public List<DeploymentUnit> getDeploymentUnitsByUuaa(String uuaa) {
-        return repository.findAll().stream()
-            .filter(unit -> uuaa.equals(unit.getUuaa()))
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units that are containers (have component folders)
-     */
-    public List<DeploymentUnit> getContainerDeploymentUnits() {
-        return repository.findAll().stream()
-            .filter(unit -> !unit.getComponentFolders().isEmpty())
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units that are standalone (not in folders, not child units)
-     */
-    public List<DeploymentUnit> getStandaloneDeploymentUnits() {
-        return repository.findAll().stream()
-            .filter(unit -> unit.getParentDeploymentUnit() == null && unit.getParentFolder() == null)
-            .collect(Collectors.toList());
-    }
-    
-    /**
      * Gets count of deployment units by type
      */
     public CommandResponse getDeploymentUnitCount(String type) {

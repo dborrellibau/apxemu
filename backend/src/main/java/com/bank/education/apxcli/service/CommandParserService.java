@@ -307,9 +307,6 @@ public class CommandParserService {
                     response = deletionCommandService.handleDeleteCommand(sessionState);
                 }
                 break;
-            case "list":
-                response = infoCommandService.handleListCommand(subArgs);
-                break;
             case "show":
                 response = infoCommandService.handleShowCommand(subArgs, sessionState);
                 break;
@@ -505,7 +502,6 @@ public class CommandParserService {
             "apx add                  - Add component in current directory",
             "apx add dep              - Create dependency (interactive flow)",
             "apx del                  - Delete component (context-aware)",
-            "apx list [type]          - List deployment units",
             "apx show <name>          - Show details of a deployment unit", 
             "apx help                 - Show this help message",
             "",
@@ -519,7 +515,6 @@ public class CommandParserService {
             "apx init                 - Start interactive component creation",
             "apx add dep              - Create dependency (guided workflow)",
             "apx del                  - Delete component (menu varies by location)",
-            "apx list du-online       - List online deployment units",
             "apx show customer-service - Show DU details"
         );
         
