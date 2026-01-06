@@ -272,7 +272,34 @@ public class CommandParserService {
                 }
                 break;
             case "del":
-                // Validar permisos: apx del no permitido en ROOT
+                // Check for subcommands: "del in" or "del out"
+                if (subArgs.length > 0) {
+                    String delSubCommand = subArgs[0].toLowerCase();
+                    if ("in".equals(delSubCommand)) {
+                        // apx del in
+                        PathType pathTypeIn = getCurrentPathType(sessionState.getCurrentDirectory());
+                        if (pathTypeIn != PathType.COMPONENT_IN_FOLDER && 
+                            pathTypeIn != PathType.COMPONENT_IN_DULIB && 
+                            pathTypeIn != PathType.COMPONENT_STANDALONE) {
+                            response = CommandResponse.error("The 'del in' command can only be executed from a component");
+                        } else {
+                            response = deletionCommandService.handleDeleteIn(sessionState);
+                        }
+                        break;
+                    } else if ("out".equals(delSubCommand)) {
+                        // apx del out
+                        PathType pathTypeOut = getCurrentPathType(sessionState.getCurrentDirectory());
+                        if (pathTypeOut != PathType.COMPONENT_IN_FOLDER && 
+                            pathTypeOut != PathType.COMPONENT_IN_DULIB && 
+                            pathTypeOut != PathType.COMPONENT_STANDALONE) {
+                            response = CommandResponse.error("The 'del out' command can only be executed from a component");
+                        } else {
+                            response = deletionCommandService.handleDeleteOut(sessionState);
+                        }
+                        break;
+                    }
+                }
+                // Normal "apx del"
                 PathType currentTypeForDel = getCurrentPathType(sessionState.getCurrentDirectory());
                 if (!permissionService.canDelete(currentTypeForDel)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
@@ -413,8 +440,17 @@ public class CommandParserService {
         // Accept confirmation: Y, y, or Enter (empty)
         if ("y".equals(inputLower) || input.trim().isEmpty()) {
             // Dispatch to appropriate service based on action prefix
-            if (action.startsWith("delete-")) {
+            if (action.startsWith("delete-component-")) {
                 return deletionCommandService.executeConfirmedDelete(action, sessionState);
+            }
+            if (action.startsWith("delete-dependency-")) {
+                return deletionCommandService.executeConfirmedDependencyDelete(action, sessionState);
+            }
+            if (action.startsWith("delete-input-")) {
+                return deletionCommandService.executeConfirmedInputDelete(action, sessionState);
+            }
+            if (action.startsWith("delete-output-")) {
+                return deletionCommandService.executeConfirmedOutputDelete(action, sessionState);
             }
             if (action.startsWith("create-component-")) {
                 return formProcessingService.executeConfirmedCreate(action, sessionState);
@@ -450,6 +486,19 @@ public class CommandParserService {
         // Clean up pending dependency data (from apx add dep)
         sessionState.getFormData().remove("pendingDep_source");
         sessionState.getFormData().remove("pendingDep_target");
+        
+        // Clean up pending deletion dependency data (from apx del dep)
+        sessionState.getFormData().remove("pendingDelDep_componentId");
+        sessionState.getFormData().remove("pendingDelDep_dependencyId");
+        sessionState.getFormData().remove("pendingDelDep_componentName");
+        sessionState.getFormData().remove("pendingDelDep_dependencyName");
+        
+        // Clean up pending in/out deletion data (from apx del in/out)
+        sessionState.getFormData().remove("pendingInOut_transactionId");
+        sessionState.getFormData().remove("pendingInOut_dtoId");
+        sessionState.getFormData().remove("pendingInOut_transactionName");
+        sessionState.getFormData().remove("pendingInOut_dtoName");
+        sessionState.getFormData().remove("pendingInOut_context");
     }
     
     private CommandResponse showHelp() {
