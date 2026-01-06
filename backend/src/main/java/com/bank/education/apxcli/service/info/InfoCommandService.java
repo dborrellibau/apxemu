@@ -31,11 +31,6 @@ public class InfoCommandService {
         this.pathNavigationService = pathNavigationService;
     }
     
-    public CommandResponse handleListCommand(String[] args) {
-        String type = args.length > 0 ? args[0] : null;
-        return architectureService.listDeploymentUnits(type);
-    }
-    
     /**
      * Context-aware show command (ETAPA 10 - refactored with PathNavigationService)
      * - ROOT: NOT AVAILABLE - returns error
@@ -48,7 +43,7 @@ public class InfoCommandService {
         String currentDir = sessionState.getCurrentDirectory();
         if (currentDir == null) currentDir = "root";
         
-        PathType pathType = getCurrentPathType(currentDir);
+        PathType pathType = pathNavigationService.resolvePathType(currentDir);
         
         // ROOT: NOT AVAILABLE
         if (pathType == PathType.ROOT) {
@@ -78,18 +73,7 @@ public class InfoCommandService {
         return CommandResponse.error("Command 'apx show' not available at current location");
     }
     
-    /**
-     * Helper method to get PathType from currentDirectory string.
-     * Converts legacy string format to PathType for level detection.
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
-            return PathType.ROOT;
-        }
-        
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path != null ? path.getType() : PathType.ROOT;
-    }
+
     
     /**
      * Handle show at level 1 - DU or standalone component

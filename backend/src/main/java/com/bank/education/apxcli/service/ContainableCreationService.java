@@ -41,7 +41,7 @@ public class ContainableCreationService {
                                            String uuaa, String code, String className, 
                                            String version, String country, String description, String customName) {
         
-        DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+        DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
         if (unitType == null) {
             return CommandResponse.error("Invalid type: " + type);
         }
@@ -240,23 +240,6 @@ public class ContainableCreationService {
         }
     }
     
-    /**
-     * Helper method to parse type strings
-     */
-    private DeploymentUnit.DeploymentUnitType parseType(String type) {
-        if (type == null) return null;
-        
-        switch (type.toLowerCase()) {
-            case "du-online": return DeploymentUnit.DeploymentUnitType.DU_ONLINE;
-            case "du-lib": return DeploymentUnit.DeploymentUnitType.DU_LIB;
-            case "dto": case "dtos": return DeploymentUnit.DeploymentUnitType.DTO;
-            case "lib": case "libs": return DeploymentUnit.DeploymentUnitType.LIB;
-            case "lib-impl": return DeploymentUnit.DeploymentUnitType.LIB_IMPL;
-            case "trx": case "trxs": return DeploymentUnit.DeploymentUnitType.TRX;
-            default: return null;
-        }
-    }
-    
     // Public methods for creating specific types - delegates to universal method
     
     public CommandResponse createDto(String uuaa, String code, String className, String description) {
@@ -397,7 +380,7 @@ public class ContainableCreationService {
      * Generic method to create deployment units by type and name
      */
     public CommandResponse createDeploymentUnit(String type, String name) {
-        DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+        DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
         
         if (unitType == null) {
             return CommandResponse.error("Unsupported deployment unit type: " + type);

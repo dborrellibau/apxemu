@@ -55,7 +55,7 @@ public class DependencyCommandService {
         }
         
         // Get PathType and NavigationPath
-        PathType pathType = getCurrentPathType(currentDir);
+        PathType pathType = pathNavigationService.resolvePathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
         // Only allow from component level
@@ -334,16 +334,4 @@ public class DependencyCommandService {
         return allowedTypes;
     }
     
-    /**
-     * Helper method to get PathType from currentDirectory string.
-     * Converts legacy string format to PathType.
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
-            return PathType.ROOT;
-        }
-        
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path != null ? path.getType() : PathType.ROOT;
-    }
 }

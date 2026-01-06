@@ -32,7 +32,7 @@ public class DeploymentUnitQueryService {
         List<DeploymentUnit> units;
         
         if (type != null) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             
             if (unitType == null) {
                 return CommandResponse.error("Invalid type: " + type + ". Use: du-online, du-lib, dto, lib, or trx");
@@ -85,54 +85,11 @@ public class DeploymentUnitQueryService {
     }
     
     /**
-     * Gets all deployment units (raw entities)
-     */
-    public List<DeploymentUnit> getAllDeploymentUnitsRaw() {
-        return repository.findAll();
-    }
-    
-    /**
-     * Searches deployment units by name pattern
-     */
-    public List<DeploymentUnit> searchDeploymentUnitsByName(String namePattern) {
-        return repository.findAll().stream()
-            .filter(unit -> unit.getName().toLowerCase().contains(namePattern.toLowerCase()))
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units by UUAA
-     */
-    public List<DeploymentUnit> getDeploymentUnitsByUuaa(String uuaa) {
-        return repository.findAll().stream()
-            .filter(unit -> uuaa.equals(unit.getUuaa()))
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units that are containers (have component folders)
-     */
-    public List<DeploymentUnit> getContainerDeploymentUnits() {
-        return repository.findAll().stream()
-            .filter(unit -> !unit.getComponentFolders().isEmpty())
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * Gets deployment units that are standalone (not in folders, not child units)
-     */
-    public List<DeploymentUnit> getStandaloneDeploymentUnits() {
-        return repository.findAll().stream()
-            .filter(unit -> unit.getParentDeploymentUnit() == null && unit.getParentFolder() == null)
-            .collect(Collectors.toList());
-    }
-    
-    /**
      * Gets count of deployment units by type
      */
     public CommandResponse getDeploymentUnitCount(String type) {
         if (type != null) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             if (unitType == null) {
                 return CommandResponse.error("Invalid type: " + type);
             }
@@ -142,23 +99,6 @@ public class DeploymentUnitQueryService {
         } else {
             long count = repository.count();
             return CommandResponse.info("Total deployment units: " + count);
-        }
-    }
-    
-    /**
-     * Helper method to parse type strings
-     */
-    private DeploymentUnit.DeploymentUnitType parseType(String type) {
-        if (type == null) return null;
-        
-        switch (type.toLowerCase()) {
-            case "du-online": return DeploymentUnit.DeploymentUnitType.DU_ONLINE;
-            case "du-lib": return DeploymentUnit.DeploymentUnitType.DU_LIB;
-            case "dto": case "dtos": return DeploymentUnit.DeploymentUnitType.DTO;
-            case "lib": case "libs": return DeploymentUnit.DeploymentUnitType.LIB;
-            case "lib-impl": return DeploymentUnit.DeploymentUnitType.LIB_IMPL;
-            case "trx": case "trxs": return DeploymentUnit.DeploymentUnitType.TRX;
-            default: return null;
         }
     }
     

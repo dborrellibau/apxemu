@@ -121,7 +121,7 @@ public class FormProcessingService {
             
             // Check if we're in a specific folder and should create object within that DU
             if (!"root".equals(currentDir) && currentDir != null) {
-                PathType pathType = getCurrentPathType(currentDir);
+                PathType pathType = pathNavigationService.resolvePathType(currentDir);
                 
                 // If we're in a FOLDER (level 2), create component within that DU
                 if (pathType == PathType.FOLDER) {
@@ -201,16 +201,4 @@ public class FormProcessingService {
         }
     }
     
-    /**
-     * Helper method to get PathType from currentDirectory string.
-     * Converts legacy string format to PathType for validation.
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
-            return PathType.ROOT;
-        }
-        
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path != null ? path.getType() : PathType.ROOT;
-    }
 }
