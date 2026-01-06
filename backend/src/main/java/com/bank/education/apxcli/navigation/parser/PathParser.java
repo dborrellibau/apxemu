@@ -21,9 +21,15 @@ public class PathParser {
      *   "customer-service/dto" -> [customer-service, dto]
      *   "customer-service/dto/CustomerDTO" -> [customer-service, dto, CustomerDTO]
      *   "" -> []
+     *   "root" -> [] (special case: root directory)
      */
     public List<String> parse(String rawPath) {
         if (rawPath == null || rawPath.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Special case: "root" represents the root directory (empty path)
+        if ("root".equals(rawPath.trim())) {
             return new ArrayList<>();
         }
 
