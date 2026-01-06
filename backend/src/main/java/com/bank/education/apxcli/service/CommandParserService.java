@@ -237,7 +237,7 @@ public class CommandParserService {
                 break;
             case "init":
                 // Validar permisos: apx init solo permitido en ROOT
-                PathType currentType = getCurrentPathType(sessionState.getCurrentDirectory());
+                PathType currentType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
                 if (!permissionService.canCreateDeploymentUnit(currentType)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
                 } else {
@@ -250,7 +250,7 @@ public class CommandParserService {
                     String addSubCommand = subArgs[0].toLowerCase();
                     if ("dep".equals(addSubCommand)) {
                         // Validar permisos: apx add dep solo permitido en componentes
-                        PathType currentTypeForDep = getCurrentPathType(sessionState.getCurrentDirectory());
+                        PathType currentTypeForDep = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
                         if (!permissionService.canCreateDependency(currentTypeForDep)) {
                             response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
                         } else {
@@ -277,7 +277,7 @@ public class CommandParserService {
                     String delSubCommand = subArgs[0].toLowerCase();
                     if ("in".equals(delSubCommand)) {
                         // apx del in
-                        PathType pathTypeIn = getCurrentPathType(sessionState.getCurrentDirectory());
+                        PathType pathTypeIn = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
                         if (pathTypeIn != PathType.COMPONENT_IN_FOLDER && 
                             pathTypeIn != PathType.COMPONENT_IN_DULIB && 
                             pathTypeIn != PathType.COMPONENT_STANDALONE) {
@@ -288,7 +288,7 @@ public class CommandParserService {
                         break;
                     } else if ("out".equals(delSubCommand)) {
                         // apx del out
-                        PathType pathTypeOut = getCurrentPathType(sessionState.getCurrentDirectory());
+                        PathType pathTypeOut = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
                         if (pathTypeOut != PathType.COMPONENT_IN_FOLDER && 
                             pathTypeOut != PathType.COMPONENT_IN_DULIB && 
                             pathTypeOut != PathType.COMPONENT_STANDALONE) {
@@ -300,7 +300,7 @@ public class CommandParserService {
                     }
                 }
                 // Normal "apx del"
-                PathType currentTypeForDel = getCurrentPathType(sessionState.getCurrentDirectory());
+                PathType currentTypeForDel = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
                 if (!permissionService.canDelete(currentTypeForDel)) {
                     response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
                 } else {
@@ -344,7 +344,7 @@ public class CommandParserService {
         String currentDir = sessionState.getCurrentDirectory();
         
         // Obtener PathType actual usando PathNavigationService
-        PathType currentType = getCurrentPathType(currentDir);
+        PathType currentType = pathNavigationService.resolvePathType(currentDir);
         
         // Validar permisos usando CommandPermissionService
         if (!permissionService.canCreateComponent(currentType)) {
@@ -540,16 +540,4 @@ public class CommandParserService {
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
     }
     
-    /**
-     * Helper method to get PathType from currentDirectory string.
-     * Converts legacy string format to PathType for permission validation.
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        if (currentDir == null || "root".equals(currentDir) || currentDir.trim().isEmpty()) {
-            return PathType.ROOT;
-        }
-        
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path != null ? path.getType() : PathType.ROOT;
-    }
 }

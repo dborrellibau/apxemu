@@ -46,7 +46,7 @@ public class InOutCommandService {
         }
         
         // Get PathType and NavigationPath
-        PathType pathType = getCurrentPathType(currentDir);
+        PathType pathType = pathNavigationService.resolvePathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
         // Only allow from component level
@@ -90,7 +90,7 @@ public class InOutCommandService {
         }
         
         // Get PathType and NavigationPath
-        PathType pathType = getCurrentPathType(currentDir);
+        PathType pathType = pathNavigationService.resolvePathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
         // Only allow from component level
@@ -235,13 +235,5 @@ public class InOutCommandService {
         result.setPrompt(sessionState.getCurrentPrompt());
         
         return result;
-    }
-    
-    /**
-     * Gets current path type from directory string
-     */
-    private PathType getCurrentPathType(String currentDir) {
-        NavigationPath path = pathNavigationService.createPath(currentDir);
-        return path.getType();
     }
 }
