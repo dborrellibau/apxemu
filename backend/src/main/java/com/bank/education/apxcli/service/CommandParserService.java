@@ -310,9 +310,6 @@ public class CommandParserService {
             case "list":
                 response = infoCommandService.handleListCommand(subArgs);
                 break;
-            case "dep":
-                response = handleDepCommand(subArgs);
-                break;
             case "show":
                 response = infoCommandService.handleShowCommand(subArgs, sessionState);
                 break;
@@ -398,17 +395,6 @@ public class CommandParserService {
         );
         response.setPrompt(sessionState.getCurrentPrompt());
         return response;
-    }
-    
-    private CommandResponse handleDepCommand(String[] args) {
-        if (args.length < 2) {
-            return CommandResponse.error("Dep command requires source and target names");
-        }
-        
-        String sourceName = args[0];
-        String targetName = args[1];
-        
-        return architectureService.createDependency(sourceName, targetName);
     }
     
     private FormState getOrCreateSessionState(String sessionId) {
