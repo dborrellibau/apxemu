@@ -23,7 +23,7 @@ public class ContainableValidationService {
      */
     public boolean containableExists(String identifier, String type) {
         if (type != null) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             if (unitType != null) {
                 return repository.existsByTypeAndCode(unitType, identifier);
             }
@@ -69,30 +69,13 @@ public class ContainableValidationService {
         }
         
         if (code != null && !code.trim().isEmpty()) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             if (unitType != null && repository.existsByTypeAndCode(unitType, code)) {
                 result.addError("Code '" + code + "' already exists for type " + type);
             }
         }
         
         return result;
-    }
-    
-    /**
-     * Helper method to parse type strings - extracted from ArchitectureService
-     */
-    private DeploymentUnit.DeploymentUnitType parseType(String type) {
-        if (type == null) return null;
-        
-        switch (type.toLowerCase()) {
-            case "du-online": return DeploymentUnit.DeploymentUnitType.DU_ONLINE;
-            case "du-lib": return DeploymentUnit.DeploymentUnitType.DU_LIB;
-            case "dto": case "dtos": return DeploymentUnit.DeploymentUnitType.DTO;
-            case "lib": case "libs": return DeploymentUnit.DeploymentUnitType.LIB;
-            case "lib-impl": return DeploymentUnit.DeploymentUnitType.LIB_IMPL;
-            case "trx": case "trxs": return DeploymentUnit.DeploymentUnitType.TRX;
-            default: return null;
-        }
     }
     
     /**

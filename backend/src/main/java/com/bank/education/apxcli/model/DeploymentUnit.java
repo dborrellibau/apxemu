@@ -352,13 +352,36 @@ public class DeploymentUnit implements Containable {
             return value;
         }
         
+        /**
+         * Parses a string to DeploymentUnitType.
+         * Accepts exact values ("dto", "lib", "trx", "du-online", "du-lib", "lib-impl")
+         * and plural variants ("dtos", "libs", "trxs").
+         * 
+         * @param text the string to parse (case-insensitive)
+         * @return the corresponding DeploymentUnitType, or null if not recognized
+         */
         public static DeploymentUnitType fromString(String text) {
-            for (DeploymentUnitType type : DeploymentUnitType.values()) {
-                if (type.value.equalsIgnoreCase(text)) {
-                    return type;
-                }
+            if (text == null) return null;
+            
+            switch (text.toLowerCase()) {
+                case "du-online": 
+                    return DU_ONLINE;
+                case "du-lib": 
+                    return DU_LIB;
+                case "dto": 
+                case "dtos": 
+                    return DTO;
+                case "lib": 
+                case "libs": 
+                    return LIB;
+                case "lib-impl": 
+                    return LIB_IMPL;
+                case "trx": 
+                case "trxs": 
+                    return TRX;
+                default: 
+                    return null;
             }
-            return DU_ONLINE; // default
         }
     }
 }

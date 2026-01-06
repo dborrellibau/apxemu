@@ -32,7 +32,7 @@ public class DeploymentUnitQueryService {
         List<DeploymentUnit> units;
         
         if (type != null) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             
             if (unitType == null) {
                 return CommandResponse.error("Invalid type: " + type + ". Use: du-online, du-lib, dto, lib, or trx");
@@ -89,7 +89,7 @@ public class DeploymentUnitQueryService {
      */
     public CommandResponse getDeploymentUnitCount(String type) {
         if (type != null) {
-            DeploymentUnit.DeploymentUnitType unitType = parseType(type);
+            DeploymentUnit.DeploymentUnitType unitType = DeploymentUnit.DeploymentUnitType.fromString(type);
             if (unitType == null) {
                 return CommandResponse.error("Invalid type: " + type);
             }
@@ -99,23 +99,6 @@ public class DeploymentUnitQueryService {
         } else {
             long count = repository.count();
             return CommandResponse.info("Total deployment units: " + count);
-        }
-    }
-    
-    /**
-     * Helper method to parse type strings
-     */
-    private DeploymentUnit.DeploymentUnitType parseType(String type) {
-        if (type == null) return null;
-        
-        switch (type.toLowerCase()) {
-            case "du-online": return DeploymentUnit.DeploymentUnitType.DU_ONLINE;
-            case "du-lib": return DeploymentUnit.DeploymentUnitType.DU_LIB;
-            case "dto": case "dtos": return DeploymentUnit.DeploymentUnitType.DTO;
-            case "lib": case "libs": return DeploymentUnit.DeploymentUnitType.LIB;
-            case "lib-impl": return DeploymentUnit.DeploymentUnitType.LIB_IMPL;
-            case "trx": case "trxs": return DeploymentUnit.DeploymentUnitType.TRX;
-            default: return null;
         }
     }
     
