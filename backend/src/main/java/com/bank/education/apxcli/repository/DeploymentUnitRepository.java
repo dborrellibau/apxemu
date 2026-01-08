@@ -27,4 +27,17 @@ public interface DeploymentUnitRepository extends JpaRepository<DeploymentUnit, 
     // Banking code validation methods
     @Query("SELECT COUNT(d) > 0 FROM DeploymentUnit d WHERE d.type = :type AND d.code = :code")
     boolean existsByTypeAndCode(@Param("type") DeploymentUnit.DeploymentUnitType type, @Param("code") String code);
+    
+    // Validates code+UUAA for standalone DTOs (no parentFolder)
+    @Query("SELECT COUNT(d) > 0 FROM DeploymentUnit d WHERE d.type = :type AND d.code = :code AND d.uuaa = :uuaa AND d.parentFolder IS NULL")
+    boolean existsStandaloneByTypeCodeAndUuaa(@Param("type") DeploymentUnit.DeploymentUnitType type, 
+                                              @Param("code") String code, 
+                                              @Param("uuaa") String uuaa);
+    
+    // Validates code+UUAA for DTOs within a specific folder
+    @Query("SELECT COUNT(d) > 0 FROM DeploymentUnit d WHERE d.type = :type AND d.code = :code AND d.uuaa = :uuaa AND d.parentFolder.id = :folderId")
+    boolean existsInFolderByTypeCodeAndUuaa(@Param("type") DeploymentUnit.DeploymentUnitType type, 
+                                           @Param("code") String code, 
+                                           @Param("uuaa") String uuaa,
+                                           @Param("folderId") Long folderId);
 }

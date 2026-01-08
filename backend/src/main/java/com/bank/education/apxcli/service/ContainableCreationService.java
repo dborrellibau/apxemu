@@ -81,6 +81,13 @@ public class ContainableCreationService {
             return CommandResponse.error("Unit '" + name + "' already exists");
         }
         
+        // Special validation for DTO standalone: check code+UUAA in standalone context
+        if (type == DeploymentUnit.DeploymentUnitType.DTO) {
+            if (validationService.isDtoCodeAndUuaaExistsInStandalone(code, uuaa)) {
+                return CommandResponse.error("DTO with code '" + code + "' and UUAA '" + uuaa + "' already exists in root");
+            }
+        }
+        
         // Get strategy for this type
         DeploymentUnitStrategy strategy = DeploymentUnitStrategyFactory.getStrategy(type);
         
@@ -126,13 +133,23 @@ public class ContainableCreationService {
             return CommandResponse.error("No appropriate folder found in " + containerName + " for " + type);
         }
         
-        // Check if code already exists in this folder
+        // Check if code+UUAA already exists in this folder
         ComponentFolder folder = folderOpt.get();
-        boolean codeExists = folder.getContainedUnits().stream()
-            .anyMatch(unit -> code != null && code.equals(unit.getCode()));
         
-        if (codeExists) {
-            return CommandResponse.error(type.name() + " with code '" + code + "' already exists in " + containerName);
+        // Special validation for DTO: check code+UUAA combination
+        if (type == DeploymentUnit.DeploymentUnitType.DTO) {
+            boolean dtoExists = validationService.isDtoCodeAndUuaaExistsInFolder(code, uuaa, folder.getId());
+            if (dtoExists) {
+                return CommandResponse.error("DTO with code '" + code + "' and UUAA '" + uuaa + "' already exists in " + containerName);
+            }
+        } else {
+            // For other types, keep existing validation (code only)
+            boolean codeExists = folder.getContainedUnits().stream()
+                .anyMatch(unit -> code != null && code.equals(unit.getCode()));
+            
+            if (codeExists) {
+                return CommandResponse.error(type.name() + " with code '" + code + "' already exists in " + containerName);
+            }
         }
         
         // Validate using strategy

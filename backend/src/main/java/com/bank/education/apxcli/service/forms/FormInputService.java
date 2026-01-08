@@ -44,7 +44,7 @@ public class FormInputService {
         FormField field = fields.get(step);
 
         // Validate input (delegated to FormValidationService)
-        CommandResponse validation = formValidationService.validateInput(field, input, formType);
+        CommandResponse validation = formValidationService.validateInput(field, input, formType, formState);
         if (!validation.isSuccess()) {
             validation.setPrompt(sessionState.getCurrentPrompt());
             return validation;

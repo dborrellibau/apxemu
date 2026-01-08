@@ -46,8 +46,32 @@ public class ContainableValidationService {
     }
     
     /**
+     * Validates if a DTO code+UUAA combination already exists in standalone context (root)
+     * @param code DTO code (001-999)
+     * @param uuaa Application UUAA
+     * @return true if a standalone DTO with same code+UUAA already exists
+     */
+    public boolean isDtoCodeAndUuaaExistsInStandalone(String code, String uuaa) {
+        return repository.existsStandaloneByTypeCodeAndUuaa(
+            DeploymentUnit.DeploymentUnitType.DTO, code, uuaa);
+    }
+    
+    /**
+     * Validates if a DTO code+UUAA combination already exists in a specific folder
+     * @param code DTO code (001-999)
+     * @param uuaa Application UUAA
+     * @param folderId ID of the ComponentFolder
+     * @return true if a DTO with same code+UUAA already exists in that folder
+     */
+    public boolean isDtoCodeAndUuaaExistsInFolder(String code, String uuaa, Long folderId) {
+        return repository.existsInFolderByTypeCodeAndUuaa(
+            DeploymentUnit.DeploymentUnitType.DTO, code, uuaa, folderId);
+    }
+    
+    /**
      * Validates that a deployment unit name is available
      */
+    
     public boolean isNameAvailable(String name) {
         return !repository.existsByName(name);
     }
