@@ -32,6 +32,15 @@ public class ContainableCreationService {
         this.diagramService = diagramService;
         this.validationService = validationService;
     }
+
+        /**
+     * Builds unified success message for project creation
+     * @param projectName the name of the created project/component
+     * @return unified message: "Project created {projectName}"
+     */
+    private String buildProjectCreatedMessage(String projectName) {
+        return "Project created " + projectName;
+    }
     
     /**
      * Universal method to create any Containable object, either standalone or within a container
@@ -92,7 +101,7 @@ public class ContainableCreationService {
         diagramService.notifyDiagramUpdate();
         
         return CommandResponse.success(
-            "Created " + type.name() + " '" + name + "' - " + strategy.getDescription(),
+            buildProjectCreatedMessage(name),
             ContainableDto.from(saved)
         );
     }
@@ -142,7 +151,7 @@ public class ContainableCreationService {
         diagramService.notifyDiagramUpdate();
         
         return CommandResponse.success(
-            "Created " + type.name() + " '" + name + "' in " + containerName + "/" + folder.getType().name().toLowerCase(),
+            buildProjectCreatedMessage(name),
             DeploymentUnitDto.from(object)
         );
     }
@@ -330,7 +339,7 @@ public class ContainableCreationService {
         diagramService.notifyDiagramUpdate();
         
         return CommandResponse.success(
-            "Created LIB '" + baseName + "' and '" + implName + "' in " + duName + "/library"
+            buildProjectCreatedMessage(baseName + " and " + implName)
         );
     }
 

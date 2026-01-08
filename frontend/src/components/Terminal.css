@@ -98,6 +98,7 @@
 
 .terminal-line.info {
   color: #87ceeb;
+  font-size: 14px;
 }
 
 .terminal-line.menu {
@@ -106,8 +107,9 @@
 }
 
 .terminal-line.form {
-  color: #ffa500;
+  color: #057db1;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .terminal-input-line {
