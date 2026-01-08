@@ -88,17 +88,11 @@ public class DeletionCommandService {
      * @param pathType current path type (DU_ONLINE or COMPONENT_*)
      */
 private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
-    // ===== Cabecera con recuadro grande =====
+    // Cabecera simple (se mostrará en azul)
     StringBuilder header = new StringBuilder();
-    header.append("╔══════════════════════════════════════════════════════════╗\n");
-    header.append("║                 ELIMINACIÓN EN: ")
-          .append(contextName)
-          .append("                 \n");
-    header.append("╚══════════════════════════════════════════════════════════╝\n");
-    header.append("\n");
     header.append("Seleccione el tipo de elemento a eliminar:\n");
 
-    // ===== Opciones (se pintan en amarillo como apx init) =====
+    // Opciones (se mostrarán en amarillo, como los items de apx init)
     java.util.List<String> options = java.util.Arrays.asList(
         "1. dep     - Dependencia",
         "2. dto     - Data Transfer Object",
@@ -108,7 +102,7 @@ private CommandResponse showDeletionMenu(FormState sessionState, String contextN
         "6. util    - Utility"
     );
 
-    // ===== Estado de la sesión (igual que antes) =====
+    // Store context based on PathType
     sessionState.addData("deletionPathType", pathType.name());
     if (pathType == PathType.DU_ONLINE) {
         sessionState.addData("deletionDU", contextName);
@@ -118,9 +112,7 @@ private CommandResponse showDeletionMenu(FormState sessionState, String contextN
     sessionState.addData("deletionStep", "type-selection");
     sessionState.setAwaitingDeletionSelection(true);
 
-    // Usamos MENU para que el frontend pinte:
-    //   - header (String) como .info (azul)
-    //   - options (List<String>) como .menu (amarillo)
+    // Usamos MENU para que el frontend pinte igual que apx init
     return CommandResponse.menu(header.toString(), options);
 }
     
