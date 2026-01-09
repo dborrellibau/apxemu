@@ -103,10 +103,16 @@ export const convertToReactFlow = (hierarchicalData) => {
           const targetNode = nodes.find(n => n.data.name === depName);
           
           if (targetNode) {
+            // Check if it's a self-dependency (self-loop)
+            const isSelfLoop = sourceNode.id === targetNode.id;
+            
             edges.push({
               id: `dependency-${sourceNode.id}-${targetNode.id}`,
               source: sourceNode.id,
               target: targetNode.id,
+              // For self-loops, go from right to top to create a visible loop above the node
+              sourceHandle: isSelfLoop ? 'right' : undefined,
+              targetHandle: undefined, // Use default top handle for target
               type: 'smoothstep',
               animated: false,
               style: {

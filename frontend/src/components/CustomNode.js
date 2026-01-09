@@ -49,6 +49,32 @@ const CustomNode = ({ data }) => {
         }} 
       />
       
+      {/* Left connection handle for self-loops */}
+      <Handle 
+        type="target" 
+        position={Position.Left}
+        id="left"
+        style={{ 
+          background: style.border?.split(' ')[2] || '#555',
+          width: '10px',
+          height: '10px',
+          border: '2px solid white'
+        }} 
+      />
+      
+      {/* Right connection handle for self-loops */}
+      <Handle 
+        type="source" 
+        position={Position.Right}
+        id="right"
+        style={{ 
+          background: style.border?.split(' ')[2] || '#555',
+          width: '10px',
+          height: '10px',
+          border: '2px solid white'
+        }} 
+      />
+      
       {/* Header section */}
       <div style={{ 
         display: 'flex',
