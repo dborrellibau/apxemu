@@ -32,13 +32,6 @@ const HintPanel = ({ hints }) => {
             {hints.map(hint => (
               <div key={hint.id} className="hint-card">
                 <div className="hint-content">{hint.content}</div>
-                <div className="hint-timestamp">
-                  {hint.timestamp.toLocaleTimeString('es-AR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
-                </div>
               </div>
             ))}
           </div>

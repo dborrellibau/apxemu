@@ -60,14 +60,13 @@
 
 /* Lista de Hints */
 .hint-list {
-  padding: 12px;
+  padding: 8px;
 }
 
 .hint-card {
   background: #2d2d2d;
-  border-left: 3px solid #4a9eff;
-  padding: 12px;
-  margin-bottom: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
   border-radius: 4px;
   animation: fadeInSlide 0.4s ease;
 }
@@ -91,15 +90,7 @@
   word-wrap: break-word;
 }
 
-.hint-timestamp {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #3c3c3c;
-  color: #888;
-  font-size: 11px;
-  text-align: right;
-  font-family: 'Courier New', monospace;
-}
+
 
 /* Scrollbar styling */
 .hint-panel-content::-webkit-scrollbar {
