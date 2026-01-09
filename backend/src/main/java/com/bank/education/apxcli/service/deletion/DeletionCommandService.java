@@ -87,31 +87,34 @@ public class DeletionCommandService {
      * @param contextName name of DU or component
      * @param pathType current path type (DU_ONLINE or COMPONENT_*)
      */
-    private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
-        StringBuilder menu = new StringBuilder();
-        menu.append("Seleccione el tipo de elemento a eliminar:\n");
-        menu.append("\n");
-        menu.append("  1. dep     - Dependencia\n");
-        menu.append("  2. dto     - Data Transfer Object\n");
-        menu.append("  3. job     - Job\n");
-        menu.append("  4. lib     - Library\n");
-        menu.append("  5. trx     - Transaction\n");
-        menu.append("  6. util    - Utility\n");
-        menu.append("\n");
-        menu.append("Ingrese el número de opción o el tipo: ");
-        
-        // Store context based on PathType
-        sessionState.addData("deletionPathType", pathType.name());
-        if (pathType == PathType.DU_ONLINE) {
-            sessionState.addData("deletionDU", contextName);
-        } else {
-            sessionState.addData("deletionComponent", contextName);
-        }
-        sessionState.addData("deletionStep", "type-selection");
-        sessionState.setAwaitingDeletionSelection(true);
-        
-        return CommandResponse.info(menu.toString());
+private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
+    // Cabecera simple (se mostrará en azul)
+    StringBuilder header = new StringBuilder();
+    header.append("Seleccione el tipo de elemento a eliminar:\n");
+
+    // Opciones (se mostrarán en amarillo, como los items de apx init)
+    java.util.List<String> options = java.util.Arrays.asList(
+        "1. dep     - Dependencia",
+        "2. dto     - Data Transfer Object",
+        "3. job     - Job",
+        "4. lib     - Library",
+        "5. trx     - Transaction",
+        "6. util    - Utility"
+    );
+
+    // Store context based on PathType
+    sessionState.addData("deletionPathType", pathType.name());
+    if (pathType == PathType.DU_ONLINE) {
+        sessionState.addData("deletionDU", contextName);
+    } else {
+        sessionState.addData("deletionComponent", contextName);
     }
+    sessionState.addData("deletionStep", "type-selection");
+    sessionState.setAwaitingDeletionSelection(true);
+
+    // Usamos MENU para que el frontend pinte igual que apx init
+    return CommandResponse.menu(header.toString(), options);
+}
     
     /**
      * Level 2 (du-name/folder): Show component list from folder
@@ -125,15 +128,16 @@ public class DeletionCommandService {
             return CommandResponse.error("No components found in folder '" + folderName + "'");
         }
         
-        // Build selection list
-        StringBuilder menu = new StringBuilder();
+        // Cabecera + instrucciones (se mostrarán en azul)
+        StringBuilder header = new StringBuilder();
+        header.append("Select component to delete:\n");
         
+        // Opciones (se mostrarán en amarillo)
+        java.util.List<String> options = new java.util.ArrayList<>();
         for (int i = 0; i < components.size(); i++) {
             DeploymentUnit component = components.get(i);
-            menu.append(String.format("  %d. %s\n", i + 1, component.getName()));
+            options.add(String.format("%d. %s", i + 1, component.getName()));
         }
-        
-        menu.append("\nEnter component number or name: ");
         
         // Store context for next step
         sessionState.addData("deletionContext", "folder-level");
@@ -143,7 +147,8 @@ public class DeletionCommandService {
         sessionState.addData("deletionComponentCount", String.valueOf(components.size()));
         sessionState.setAwaitingDeletionSelection(true);
         
-        return CommandResponse.info(menu.toString());
+        // Usamos MENU para que el frontend pinte igual que apx init
+        return CommandResponse.menu(header.toString(), options);
     }
     
     /**
@@ -312,25 +317,27 @@ public class DeletionCommandService {
             return CommandResponse.info("Component '" + componentName + "' has no dependencies");
         }
         
-        StringBuilder menu = new StringBuilder();
+        // Cabecera + instrucciones (se mostrarán en azul)
+        StringBuilder header = new StringBuilder();
+        header.append("Select dependency to remove:\n");
         
+        // Opciones (se mostrarán en amarillo)
         List<DeploymentUnit> depList = new ArrayList<>(dependencies);
+        java.util.List<String> options = new java.util.ArrayList<>();
         for (int i = 0; i < depList.size(); i++) {
             DeploymentUnit dep = depList.get(i);
-            menu.append(String.format("  %d. %-20s [%s]\n", 
+            options.add(String.format("%d. %-20s [%s]", 
                 i + 1, 
                 dep.getName(), 
                 dep.getType().getValue()
             ));
         }
         
-        menu.append("\n");
-        menu.append("Select dependency to remove (number or name): ");
-        
         sessionState.addData("deletionStep", "dependency-selection");
         sessionState.addData("deletionDependencyCount", String.valueOf(depList.size()));
         
-        return CommandResponse.info(menu.toString());
+        // Usamos MENU para que el frontend pinte igual que apx init
+        return CommandResponse.menu(header.toString(), options);
     }
     
     /**
