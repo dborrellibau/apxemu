@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Terminal.css';
 
-const Terminal = ({ wsService, isConnected }) => {
+const Terminal = ({ wsService, isConnected, onHintReceived }) => {
   const [history, setHistory] = useState([]);
   const [currentCommand, setCurrentCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState([]);
@@ -43,6 +43,12 @@ const Terminal = ({ wsService, isConnected }) => {
 
   const handleCommandResponse = (response) => {
     const newEntries = [];
+    
+    // ========== EDUCATIONAL HINT DETECTION ==========
+    // Notificar al padre si hay hint en la respuesta
+    if (response.educationalHint && onHintReceived) {
+      onHintReceived(response.educationalHint);
+    }
     
     // Update current prompt if provided
     if (response.prompt) {

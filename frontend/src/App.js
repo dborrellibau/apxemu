@@ -21,6 +21,17 @@ function App() {
     localStorage.setItem('showHints', newValue.toString());
   };
 
+  const handleHintReceived = (hintText) => {
+    const newHint = {
+      id: Date.now(),
+      content: hintText,
+      timestamp: new Date()
+    };
+    
+    // Añadir hint al principio del array, mantener últimos 10
+    setHints(prev => [newHint, ...prev.slice(0, 9)]);
+  };
+
   useEffect(() => {
     // Use the singleton instance directly
     webSocketService.onConnect = async () => {
@@ -92,7 +103,11 @@ function App() {
           )}
           
           <div className={`terminal-section ${showHints ? 'with-hints' : 'full-height'}`}>
-            <Terminal wsService={webSocketService} isConnected={isConnected} />
+            <Terminal 
+              wsService={webSocketService} 
+              isConnected={isConnected}
+              onHintReceived={handleHintReceived}
+            />
           </div>
         </div>
         
