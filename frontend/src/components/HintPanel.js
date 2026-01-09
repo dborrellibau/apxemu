@@ -15,8 +15,7 @@ const HintPanel = ({ hints }) => {
     <div className="hint-panel">
       {/* Header */}
       <div className="hint-panel-header">
-        <span className="hint-icon">💡</span>
-        <span className="hint-title">Hints Educativos</span>
+        <span className="hint-title">V-Ether Educational Hints</span>
         {hints.length > 0 && (
           <span className="hint-badge">{hints.length}</span>
         )}
@@ -26,8 +25,7 @@ const HintPanel = ({ hints }) => {
       <div className="hint-panel-content" ref={scrollRef}>
         {hints.length === 0 ? (
           <div className="hint-empty-state">
-            <span className="empty-icon">📚</span>
-            <p>Los hints educativos aparecerán aquí mientras usas comandos en la terminal</p>
+            <p>Educational hints will appear here as you use terminal commands</p>
           </div>
         ) : (
           <div className="hint-list">
