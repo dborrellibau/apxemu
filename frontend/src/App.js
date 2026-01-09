@@ -7,6 +7,18 @@ import './App.css';
 function App() {
   const [diagramData, setDiagramData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [showHints, setShowHints] = useState(() => {
+    // Leer preferencia de localStorage, default: true
+    const saved = localStorage.getItem('showHints');
+    return saved !== 'false';
+  });
+  const [hints, setHints] = useState([]);
+
+  const toggleHints = () => {
+    const newValue = !showHints;
+    setShowHints(newValue);
+    localStorage.setItem('showHints', newValue.toString());
+  };
 
   useEffect(() => {
     // Use the singleton instance directly
@@ -53,8 +65,19 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>V-Ether</h1>
-        <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
-          {isConnected ? '● Connected' : '● Disconnected'}
+        
+        <div className="header-controls">
+          <button 
+            className={`hint-toggle-btn ${showHints ? 'active' : ''}`}
+            onClick={toggleHints}
+            title={showHints ? 'Ocultar hints educativos' : 'Mostrar hints educativos'}
+          >
+            📚 Hints
+          </button>
+          
+          <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
+            {isConnected ? '● Connected' : '● Disconnected'}
+          </div>
         </div>
       </header>
       
