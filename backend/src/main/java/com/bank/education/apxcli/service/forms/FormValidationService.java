@@ -1,6 +1,7 @@
 package com.bank.education.apxcli.service.forms;
 
 import com.bank.education.apxcli.dto.CommandResponse;
+import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.form.FormField;
 import com.bank.education.apxcli.service.ContainableValidationService;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ public class FormValidationService {
         this.validationService = validationService;
     }
     
-    public CommandResponse validateInput(FormField field, String input, String formType) {
+    public CommandResponse validateInput(FormField field, String input, String formType, FormState formState) {
         if (input == null || input.trim().isEmpty()) {
             if (field.isRequired()) {
                 return CommandResponse.error("Input cannot be empty. Try again:");
@@ -33,7 +34,7 @@ public class FormValidationService {
             case UUAA:
                 return validateUUAA(trimmed);
             case CODE:
-                return validateCode(trimmed, formType);
+                return validateCode(trimmed, formType, formState);
             case VERSION:
                 return validateVersion(trimmed);
             case COUNTRY_SELECT:
@@ -70,12 +71,38 @@ public class FormValidationService {
         return CommandResponse.success("Valid input");
     }
     
-    private CommandResponse validateCode(String input, String formType) {
+    private CommandResponse validateCode(String input, String formType, FormState formState) {
         if (!input.matches("^\\d{3}$")) {
             return CommandResponse.error("Code must be exactly 3 digits (001-999). Try again:");
         }
         
-        // Check for unique code by type using the universal method
+        // Special validation for DTO: check code+UUAA in context (standalone vs folder)
+        if ("dto".equals(formType) && formState != null) {
+            String uuaa = formState.getData("uuaa");
+            if (uuaa == null || uuaa.trim().isEmpty()) {
+                // UUAA not entered yet, skip context-specific validation
+                // Will be validated later when UUAA is available
+                return CommandResponse.success("Valid input");
+            }
+            
+            String currentDir = formState.getCurrentDirectory();
+            if (currentDir == null) {
+                currentDir = "root";
+            }
+            
+            // If in root: validate standalone DTO
+            if ("root".equals(currentDir)) {
+                if (validationService.isDtoCodeAndUuaaExistsInStandalone(input, uuaa)) {
+                    return CommandResponse.error("DTO with code '" + input + "' and UUAA '" + uuaa + "' already exists in root. Try again:");
+                }
+            }
+            // If in a folder: validation will happen at creation time in createInContainer
+            // The creation service will handle the folder-specific validation
+            
+            return CommandResponse.success("Valid input");
+        }
+        
+        // For other types (lib, trx), keep existing global validation
         if (validationService.containableExists(input, formType)) {
             return CommandResponse.error("Code " + input + " already exists for " + formType.toUpperCase() + ". Try again:");
         }
