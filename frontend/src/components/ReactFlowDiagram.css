@@ -143,7 +143,6 @@
 /* Enhanced Node Styles */
 .react-flow__node {
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .react-flow__node:hover {
@@ -220,9 +219,6 @@
   }
 }
 
-.react-flow__node {
-  animation: nodeAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
 
 /* Handle styles for better visibility */
 .react-flow__handle {
