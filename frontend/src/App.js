@@ -1,12 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import Terminal from './components/Terminal';
 import ReactFlowDiagram from './components/ReactFlowDiagram';
+import HintPanel from './components/HintPanel';
 import webSocketService from './services/WebSocketService'; // Import singleton instance
 import './App.css';
 
 function App() {
   const [diagramData, setDiagramData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [showHints, setShowHints] = useState(() => {
+    // Leer preferencia de localStorage, default: true
+    const saved = localStorage.getItem('showHints');
+    return saved !== 'false';
+  });
+  const [hints, setHints] = useState([]);
+
+  const toggleHints = () => {
+    const newValue = !showHints;
+    setShowHints(newValue);
+    localStorage.setItem('showHints', newValue.toString());
+  };
+
+  const handleHintReceived = (hintText) => {
+    const newHint = {
+      id: Date.now(),
+      content: hintText,
+      timestamp: new Date()
+    };
+    
+    // Añadir hint al principio del array, mantener últimos 10
+    setHints(prev => [newHint, ...prev.slice(0, 9)]);
+  };
 
   useEffect(() => {
     // Use the singleton instance directly
@@ -53,17 +77,42 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>V-Ether</h1>
-        <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
-          {isConnected ? '● Connected' : '● Disconnected'}
+        
+        <div className="header-controls">
+          <button 
+            className={`hint-toggle-btn ${showHints ? 'active' : ''}`}
+            onClick={toggleHints}
+            title={showHints ? 'Ocultar hints educativos' : 'Mostrar hints educativos'}
+          >
+            Hints
+          </button>
+          
+          <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
+            {isConnected ? '● Connected' : '● Disconnected'}
+          </div>
         </div>
       </header>
       
       <div className="App-content">
-        <div className="terminal-panel">
-          <Terminal wsService={webSocketService} isConnected={isConnected} />
+        {/* Columna Izquierda: Hints + Terminal */}
+        <div className="left-column">
+          {showHints && (
+            <div className="hints-section">
+              <HintPanel hints={hints} />
+            </div>
+          )}
+          
+          <div className={`terminal-section ${showHints ? 'with-hints' : 'full-height'}`}>
+            <Terminal 
+              wsService={webSocketService} 
+              isConnected={isConnected}
+              onHintReceived={handleHintReceived}
+            />
+          </div>
         </div>
         
-        <div className="diagram-panel">
+        {/* Columna Derecha: Diagram */}
+        <div className="right-column">
           <ReactFlowDiagram data={diagramData} />
         </div>
       </div>

@@ -1,0 +1,111 @@
+.hint-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0c0c0c;
+  border-bottom: 2px solid #333;
+}
+
+.hint-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.hint-title {
+  flex: 1;
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+}
+
+.hint-badge {
+  background: #4a9eff;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hint-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Empty State */
+.hint-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 30px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.hint-empty-state p {
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 280px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Lista de Hints */
+.hint-list {
+  padding: 8px;
+}
+
+.hint-card {
+  background: #2d2d2d;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  animation: fadeInSlide 0.4s ease;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hint-content {
+  color: #e0e0e0;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+
+
+/* Scrollbar styling */
+.hint-panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hint-panel-content::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.hint-panel-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+.hint-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

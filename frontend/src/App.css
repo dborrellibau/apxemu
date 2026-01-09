@@ -22,6 +22,36 @@
   font-family: 'Courier New', monospace;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.hint-toggle-btn {
+  background: #1a1a1a;
+  border: 1px solid #3c3c3c;
+  color: #888;
+  padding: 5px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.hint-toggle-btn:hover {
+  background: #2d2d2d;
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+
+.hint-toggle-btn.active {
+  background: rgba(74, 158, 255, 0.2);
+  color: #4a9eff;
+  border-color: #4a9eff;
+}
+
 .status {
   font-size: 0.9rem;
   padding: 5px 10px;
@@ -47,6 +77,62 @@
   overflow: hidden;
 }
 
+/* Columna Izquierda: Hints + Terminal */
+.left-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 400px;
+  background-color: #0c0c0c;
+  border-right: 1px solid #444;
+  overflow: hidden;
+}
+
+.hints-section {
+  height: 25%;
+  min-height: 200px;
+  max-height: 350px;
+  animation: expandDown 0.3s ease;
+}
+
+@keyframes expandDown {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: 25%;
+    opacity: 1;
+  }
+}
+
+.terminal-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: flex 0.3s ease;
+}
+
+.terminal-section.with-hints {
+  /* Terminal toma el espacio restante después del hint panel */
+}
+
+.terminal-section.full-height {
+  /* Terminal ocupa 100% cuando hints está oculto */
+}
+
+/* Columna Derecha: Diagram */
+.right-column {
+  flex: 1;
+  min-width: 400px;
+  background-color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+}
+
+/* DEPRECATED - Mantener por compatibilidad temporal */
+/* DEPRECATED - Mantener por compatibilidad temporal */
 .terminal-panel {
   flex: 1;
   background-color: #0c0c0c;
@@ -55,6 +141,7 @@
   flex-direction: column;
 }
 
+/* DEPRECATED */
 .diagram-panel {
   flex: 1;
   background-color: #1a1a1a;

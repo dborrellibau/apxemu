@@ -9,6 +9,7 @@ public class CommandResponse {
     private ResponseType type;
     private Object data;
     private String prompt; // Current prompt to show in terminal
+    private String educationalHint; // Optional educational hint for user learning
     
     public CommandResponse() {}
     
@@ -114,5 +115,13 @@ public class CommandResponse {
     
     public void setPrompt(String prompt) {
         this.prompt = prompt;
+    }
+    
+    public String getEducationalHint() {
+        return educationalHint;
+    }
+    
+    public void setEducationalHint(String educationalHint) {
+        this.educationalHint = educationalHint;
     }
 }

@@ -8,6 +8,7 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
+import com.bank.education.apxcli.service.educational.EducationalHintService;
 import com.bank.education.apxcli.service.forms.AddComponentService;
 import com.bank.education.apxcli.service.forms.FormInputService;
 import com.bank.education.apxcli.service.forms.FormProcessingService;
@@ -41,6 +42,7 @@ public class CommandParserService {
     private final com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService;
     private final PathNavigationService pathNavigationService;
     private final CommandPermissionService permissionService;
+    private final EducationalHintService hintService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
@@ -56,7 +58,8 @@ public class CommandParserService {
                                com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService,
                                com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService,
                                PathNavigationService pathNavigationService,
-                               CommandPermissionService permissionService) {
+                               CommandPermissionService permissionService,
+                               EducationalHintService hintService) {
         this.navigationService = navigationService;
         this.addComponentService = addComponentService;
         this.formInputService = formInputService;
@@ -70,6 +73,7 @@ public class CommandParserService {
         this.inOutCommandService = inOutCommandService;
         this.pathNavigationService = pathNavigationService;
         this.permissionService = permissionService;
+        this.hintService = hintService;
         
         // Share activeSessions with form services
         this.addComponentService.setActiveSessions(activeSessions);
@@ -212,6 +216,16 @@ public class CommandParserService {
                 " (Type 'apx help' for available commands)");
         } else {
             response = CommandResponse.error("Unknown command: " + command + ". Type 'apx help' for available commands.");
+        }
+        
+        // ========== EDUCATIONAL HINT INJECTION ==========
+        // Add educational hint if command was successful and hint exists
+        if (response.isSuccess()) {
+            PathType currentPathType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
+            String hint = hintService.getHintFor(originalInput, currentPathType);
+            if (hint != null) {
+                response.setEducationalHint(hint);
+            }
         }
         
         // Set the current prompt based on session state
