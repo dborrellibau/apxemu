@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Terminal from './components/Terminal';
 import ReactFlowDiagram from './components/ReactFlowDiagram';
+import HintPanel from './components/HintPanel';
 import webSocketService from './services/WebSocketService'; // Import singleton instance
 import './App.css';
 
@@ -82,11 +83,21 @@ function App() {
       </header>
       
       <div className="App-content">
-        <div className="terminal-panel">
-          <Terminal wsService={webSocketService} isConnected={isConnected} />
+        {/* Columna Izquierda: Hints + Terminal */}
+        <div className="left-column">
+          {showHints && (
+            <div className="hints-section">
+              <HintPanel hints={hints} />
+            </div>
+          )}
+          
+          <div className={`terminal-section ${showHints ? 'with-hints' : 'full-height'}`}>
+            <Terminal wsService={webSocketService} isConnected={isConnected} />
+          </div>
         </div>
         
-        <div className="diagram-panel">
+        {/* Columna Derecha: Diagram */}
+        <div className="right-column">
           <ReactFlowDiagram data={diagramData} />
         </div>
       </div>
