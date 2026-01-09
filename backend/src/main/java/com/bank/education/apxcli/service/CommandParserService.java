@@ -325,6 +325,21 @@ public class CommandParserService {
             case "test":
                 response = CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
                 break;
+            // Commands under development
+            case "build":
+            case "check":
+            case "completion":
+            case "config":
+            case "deploy":
+            case "formatter":
+            case "mod":
+            case "mvn":
+            case "send":
+            case "start":
+            case "upgrade":
+            case "version":
+                response = getUnderDevelopmentResponse(subCommand);
+                break;
             default:
                 response = CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
                 break;
@@ -502,7 +517,20 @@ public class CommandParserService {
             "apx add                  - Add component in current directory",
             "apx add dep              - Create dependency (interactive flow)",
             "apx del                  - Delete component (context-aware)",
-            "apx show <name>          - Show details of a deployment unit", 
+            "apx del dep              - Delete dependency",
+            "apx show <name>          - Show details of a deployment unit",
+            "apx build                - Build transaction artifacts",
+            "apx check                - Check the artifact",
+            "apx completion           - Generate shell autocompletion script",
+            "apx config               - APX CLI configuration",
+            "apx deploy               - Deploy artifacts to local APX environment",
+            "apx formatter            - Format descriptor to XML",
+            "apx mod                  - Modify input or output configuration",
+            "apx mvn                  - Execute Maven commands",
+            "apx send                 - Send request",
+            "apx start                - Start architecture",
+            "apx upgrade              - Upgrade APX CLI",
+            "apx version              - Show APX CLI version",
             "apx help                 - Show this help message",
             "",
             "=== Navigation Examples ===",
@@ -519,6 +547,13 @@ public class CommandParserService {
         );
         
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
+    }
+    
+    /**
+     * Returns a standardized response for commands that are under development
+     */
+    private CommandResponse getUnderDevelopmentResponse(String command) {
+        return CommandResponse.error("This command is under development. The command 'apx " + command + "' is not yet available.");
     }
     
 }
