@@ -113,7 +113,7 @@ public class CommandHandlerRegistry {
         }
         
         // FAST PATH 3: Direct dispatch for apx commands (skip iteration)
-        if (command.startsWith("apx ") && apxCommandHandler != null) {
+        if (command.equals("apx") && apxCommandHandler != null) {
             log.debug("Handler '{}' processing apx command", apxCommandHandler.getName());
             return apxCommandHandler.handle(request, sessionState);
         }

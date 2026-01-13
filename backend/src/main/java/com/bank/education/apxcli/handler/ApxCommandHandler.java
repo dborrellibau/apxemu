@@ -86,7 +86,7 @@ public class ApxCommandHandler extends CommandHandler {
     @Override
     public boolean canHandle(CommandRequest request, FormState sessionState) {
         String command = request.getCommand().toLowerCase().trim();
-        return command.equals("apx") || command.startsWith("apx ");
+        return command.equals("apx");
     }
     
     @Override
