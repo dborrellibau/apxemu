@@ -3,79 +3,52 @@ package com.bank.education.apxcli.service;
 import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.model.DeploymentUnit;
+import com.bank.education.apxcli.handler.CommandHandlerRegistry;
 import com.bank.education.apxcli.navigation.PathNavigationService;
-import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
-import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
 import com.bank.education.apxcli.service.educational.EducationalHintService;
 import com.bank.education.apxcli.service.forms.AddComponentService;
 import com.bank.education.apxcli.service.forms.FormInputService;
-import com.bank.education.apxcli.service.forms.FormProcessingService;
-import com.bank.education.apxcli.service.info.InfoCommandService;
-import com.bank.education.apxcli.service.navigation.NavigationCommandService;
-import com.bank.education.apxcli.service.system.SystemCommandService;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Main command parser orchestrator - delegates to specialized services
- * Maintains session state and routes commands to appropriate handlers
+ * Simplified command parser orchestrator
+ * 
+ * Responsibilities:
+ * 1. Session management (activeSessions map)
+ * 2. Delegation to CommandHandlerRegistry for command routing
+ * 3. Educational hint injection on successful commands
+ * 4. Prompt management
+ * 
+ * All command processing logic has been moved to specialized CommandHandler implementations.
+ * See com.bank.education.apxcli.handler package for handler implementations.
  */
 @Service
 public class CommandParserService {
     
-    private final NavigationCommandService navigationService;
+    private final CommandHandlerRegistry handlerRegistry;
+    private final PathNavigationService pathNavigationService;
+    private final EducationalHintService hintService;
     private final AddComponentService addComponentService;
     private final FormInputService formInputService;
-    private final FormProcessingService formProcessingService;
-    private final InfoCommandService infoCommandService;
-    private final SystemCommandService systemCommandService;
-    private final ArchitectureOrchestrationService architectureService;
-    private final DeploymentUnitNavigationService directoryNavigationService;
-    private final com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService;
-    private final com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService;
-    private final com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService;
-    private final PathNavigationService pathNavigationService;
-    private final CommandPermissionService permissionService;
-    private final EducationalHintService hintService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
-    public CommandParserService(NavigationCommandService navigationService,
-                               AddComponentService addComponentService,
-                               FormInputService formInputService,
-                               FormProcessingService formProcessingService,
-                               InfoCommandService infoCommandService,
-                               SystemCommandService systemCommandService,
-                               ArchitectureOrchestrationService architectureService,
-                               DeploymentUnitNavigationService directoryNavigationService,
-                               com.bank.education.apxcli.service.dependencies.DependencyCommandService dependencyCommandService,
-                               com.bank.education.apxcli.service.deletion.DeletionCommandService deletionCommandService,
-                               com.bank.education.apxcli.service.inout.InOutCommandService inOutCommandService,
+    public CommandParserService(CommandHandlerRegistry handlerRegistry,
                                PathNavigationService pathNavigationService,
-                               CommandPermissionService permissionService,
-                               EducationalHintService hintService) {
-        this.navigationService = navigationService;
+                               EducationalHintService hintService,
+                               AddComponentService addComponentService,
+                               FormInputService formInputService) {
+        this.handlerRegistry = handlerRegistry;
+        this.pathNavigationService = pathNavigationService;
+        this.hintService = hintService;
         this.addComponentService = addComponentService;
         this.formInputService = formInputService;
-        this.formProcessingService = formProcessingService;
-        this.infoCommandService = infoCommandService;
-        this.systemCommandService = systemCommandService;
-        this.architectureService = architectureService;
-        this.directoryNavigationService = directoryNavigationService;
-        this.dependencyCommandService = dependencyCommandService;
-        this.deletionCommandService = deletionCommandService;
-        this.inOutCommandService = inOutCommandService;
-        this.pathNavigationService = pathNavigationService;
-        this.permissionService = permissionService;
-        this.hintService = hintService;
         
-        // Share activeSessions with form services
+        // Share activeSessions with form services (legacy compatibility)
         this.addComponentService.setActiveSessions(activeSessions);
         this.formInputService.setActiveSessions(activeSessions);
         
@@ -83,346 +56,45 @@ public class CommandParserService {
         this.activeSessions.clear();
     }
     
+    /**
+     * Main entry point for command processing
+     * Delegates to CommandHandlerRegistry which routes to appropriate handler
+     * 
+     * @param request Command request containing command text, args, and session ID
+     * @return Command response with output, status, prompt, and optional hints
+     */
     public CommandResponse parseCommand(CommandRequest request) {
-        String originalInput = request.getCommand().trim();
-        String command = originalInput.toLowerCase();
-        String[] args = request.getArgs();
         String sessionId = request.getSessionId() != null ? request.getSessionId() : "default";
         
-        // Get or create session state to track directory
+        // Get or create session state
         FormState sessionState = getOrCreateSessionState(sessionId);
         
-        // PRIORITY 1: Check for pending confirmation (highest priority)
-        if (sessionState.getAwaitingConfirmationFor() != null) {
-            CommandResponse response = handleConfirmation(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
+        // Delegate to handler registry (finds appropriate handler automatically)
+        CommandResponse response = handlerRegistry.dispatch(request, sessionState);
         
-        // Check if user is in deletion flow
-        if (sessionState.isAwaitingDeletionSelection()) {
-            CommandResponse response = deletionCommandService.handleDeletionSelection(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Check if user is waiting for init menu selection (apx init - numbers 1-5)
-        if (sessionState.isAwaitingInitSelection()) {
-            // Handle numeric selection (1-5) or type names (du-online, dto, lib, trx)
-            if (originalInput.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
-                // Clear any residual session before starting new form
-                activeSessions.remove(sessionId);
-                
-                String formType = originalInput.toLowerCase();
-                if (originalInput.matches("^\\d+$")) {
-                    int selection = Integer.parseInt(originalInput);
-                    switch (selection) {
-                        case 1: formType = "du-online"; break;
-                        case 2: formType = "du-lib"; break;
-                        case 3: formType = "dto"; break;
-                        case 4: formType = "lib"; break;
-                        case 5: formType = "trx"; break;
-                        default: 
-                            sessionState.setAwaitingInitSelection(false);
-                            CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5.");
-                            errorResponse.setPrompt(sessionState.getCurrentPrompt());
-                            return errorResponse;
-                    }
-                }
-                
-                // Clear the flag
-                sessionState.setAwaitingInitSelection(false);
-                
-                CommandResponse response = addComponentService.startFormSession(sessionId, formType, sessionState.getCurrentDirectory());
-                response.setPrompt(sessionState.getCurrentPrompt());
-                return response;
-            } else {
-                // Not a valid selection for init
-                sessionState.setAwaitingInitSelection(false);
-                CommandResponse errorResponse = CommandResponse.error("Invalid selection. Please choose 1-5 or type name (du-online, du-lib, dto, lib, trx)");
-                errorResponse.setPrompt(sessionState.getCurrentPrompt());
-                return errorResponse;
-            }
-        }
-        
-        // Check if user is waiting for component selection after apx add (numbers 1-3)
-        if (sessionState.isAwaitingComponentSelection()) {
-            return addComponentService.handleComponentSelection(sessionId, originalInput, sessionState);
-        }
-        
-        // Check if user is in dependency flow (ETAPA 9 - new functionality)
-        if (sessionState.isAwaitingDependencySourceSelection()) {
-            CommandResponse response = dependencyCommandService.handleSourceComponentInput(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        if (sessionState.isAwaitingDependencyTypeSelection()) {
-            CommandResponse response = dependencyCommandService.handleDependencyTypeSelection(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        if (sessionState.isAwaitingDependencyArtifactId()) {
-            CommandResponse response = dependencyCommandService.handleArtifactIdInput(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Check if user is in in/out flow
-        if (sessionState.isInOutSelectionMode()) {
-            CommandResponse response = inOutCommandService.handleOptionSelection(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        if (sessionState.isAwaitingInOutDtoName()) {
-            CommandResponse response = inOutCommandService.handleDtoNameInput(sessionState, originalInput);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Check if user is in an active form session
-        FormState activeForm = activeSessions.get(sessionId);
-        if (activeForm != null && activeForm.getFormType() != null) {
-            // User is in a form, treat any input as form data
-            CommandResponse response = formInputService.handleFormInput(sessionId, originalInput, activeForm, sessionState);
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        CommandResponse response;
-        
-        // Standard terminal commands (without apx prefix)
-        if ("cd".equals(command)) {
-            response = navigationService.handleCdCommand(sessionState, args);
-        } else if ("pwd".equals(command)) {
-            response = navigationService.handlePwdCommand(sessionState);
-        } else if ("ls".equals(command)) {
-            response = navigationService.handleLsCommand(sessionState, args);
-        } else if ("clear".equals(command)) {
-            response = systemCommandService.handleClearCommand();
-        } else if ("exit".equals(command)) {
-            response = systemCommandService.handleExitCommand();
-        } 
-        // APX-prefixed commands
-        else if ("apx".equals(command)) {
-            response = handleApxCommand(sessionId, sessionState, args);
-        } 
-        // Legacy support - suggest using apx prefix
-        else if ("help".equals(command) || "init".equals(command) || "add".equals(command) || 
-                 "list".equals(command) || "dep".equals(command) || "show".equals(command) ||
-                 "del".equals(command) || "delete".equals(command) ||
-                 "debug-du".equals(command) || "reset".equals(command) || "reset-all".equals(command) ||
-                 "debug".equals(command) || "test".equals(command)) {
-            response = CommandResponse.error("Command '" + command + "' requires 'apx' prefix. Use: apx " + command + 
-                " (Type 'apx help' for available commands)");
-        } else {
-            response = CommandResponse.error("Unknown command: " + command + ". Type 'apx help' for available commands.");
-        }
-        
-        // ========== EDUCATIONAL HINT INJECTION ==========
-        // Add educational hint if command was successful and hint exists
+        // Add educational hint if command was successful
         if (response.isSuccess()) {
-            PathType currentPathType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-            String hint = hintService.getHintFor(originalInput, currentPathType);
+            PathType currentPathType = pathNavigationService.resolvePathType(
+                sessionState.getCurrentDirectory()
+            );
+            String hint = hintService.getHintFor(request.getCommand(), currentPathType);
             if (hint != null) {
                 response.setEducationalHint(hint);
             }
         }
         
-        // Set the current prompt based on session state
+        // Always set current prompt
         response.setPrompt(sessionState.getCurrentPrompt());
+        
         return response;
     }
     
-    private CommandResponse handleApxCommand(String sessionId, FormState sessionState, String[] args) {
-        if (args.length == 0) {
-            CommandResponse response = CommandResponse.error("Usage: apx <command>. Type 'apx help' for available commands.");
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        String subCommand = args[0].toLowerCase();
-        String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
-        
-        CommandResponse response;
-        
-        switch (subCommand) {
-            case "help":
-                response = showHelp();
-                break;
-            case "init":
-                // Validar permisos: apx init solo permitido en ROOT
-                PathType currentType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-                if (!permissionService.canCreateDeploymentUnit(currentType)) {
-                    response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx init", currentType));
-                } else {
-                    response = systemCommandService.handleInitCommand(subArgs, sessionState);
-                }
-                break;
-            case "add":
-                // Check for subcommands: dep, in, out
-                if (subArgs.length > 0) {
-                    String addSubCommand = subArgs[0].toLowerCase();
-                    if ("dep".equals(addSubCommand)) {
-                        // Validar permisos: apx add dep solo permitido en componentes
-                        PathType currentTypeForDep = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-                        if (!permissionService.canCreateDependency(currentTypeForDep)) {
-                            response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentTypeForDep));
-                        } else {
-                            response = dependencyCommandService.handleAddDepCommand(sessionState);
-                        }
-                    } else if ("in".equals(addSubCommand)) {
-                        // apx add in - add input to transaction
-                        response = inOutCommandService.handleAddIn(sessionState);
-                    } else if ("out".equals(addSubCommand)) {
-                        // apx add out - add output to transaction
-                        response = inOutCommandService.handleAddOut(sessionState);
-                    } else {
-                        // Unknown subcommand, treat as normal apx add
-                        response = handleAddCommand(sessionId, sessionState, subArgs);
-                    }
-                } else {
-                    // No subcommand, normal "apx add" for components
-                    response = handleAddCommand(sessionId, sessionState, subArgs);
-                }
-                break;
-            case "del":
-                // Check for subcommands: "del in" or "del out"
-                if (subArgs.length > 0) {
-                    String delSubCommand = subArgs[0].toLowerCase();
-                    if ("in".equals(delSubCommand)) {
-                        // apx del in
-                        PathType pathTypeIn = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-                        if (pathTypeIn != PathType.COMPONENT_IN_FOLDER && 
-                            pathTypeIn != PathType.COMPONENT_IN_DULIB && 
-                            pathTypeIn != PathType.COMPONENT_STANDALONE) {
-                            response = CommandResponse.error("The 'del in' command can only be executed from a component");
-                        } else {
-                            response = deletionCommandService.handleDeleteIn(sessionState);
-                        }
-                        break;
-                    } else if ("out".equals(delSubCommand)) {
-                        // apx del out
-                        PathType pathTypeOut = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-                        if (pathTypeOut != PathType.COMPONENT_IN_FOLDER && 
-                            pathTypeOut != PathType.COMPONENT_IN_DULIB && 
-                            pathTypeOut != PathType.COMPONENT_STANDALONE) {
-                            response = CommandResponse.error("The 'del out' command can only be executed from a component");
-                        } else {
-                            response = deletionCommandService.handleDeleteOut(sessionState);
-                        }
-                        break;
-                    }
-                }
-                // Normal "apx del"
-                PathType currentTypeForDel = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-                if (!permissionService.canDelete(currentTypeForDel)) {
-                    response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentTypeForDel));
-                } else {
-                    response = deletionCommandService.handleDeleteCommand(sessionState);
-                }
-                break;
-            case "show":
-                response = infoCommandService.handleShowCommand(subArgs, sessionState);
-                break;
-            case "debug-du":
-                response = infoCommandService.handleDebugDuCommand(subArgs);
-                break;
-            case "reset":
-                response = systemCommandService.handleResetSessionCommand(sessionId, activeSessions);
-                break;
-            case "reset-all":
-                response = systemCommandService.handleResetAllSessionsCommand(activeSessions);
-                break;
-            case "debug":
-                response = infoCommandService.handleDebugSessionsCommand(activeSessions);
-                break;
-            case "test":
-                response = CommandResponse.success("Test command works! Args: " + String.join(", ", subArgs));
-                break;
-            // Commands under development
-            case "build":
-            case "check":
-            case "completion":
-            case "config":
-            case "deploy":
-            case "formatter":
-            case "mod":
-            case "mvn":
-            case "send":
-            case "start":
-            case "upgrade":
-            case "version":
-                response = getUnderDevelopmentResponse(subCommand);
-                break;
-            default:
-                response = CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
-                break;
-        }
-        
-        response.setPrompt(sessionState.getCurrentPrompt());
-        return response;
-    }
-    
-    private CommandResponse handleAddCommand(String sessionId, FormState sessionState, String[] args) {
-        String currentDir = sessionState.getCurrentDirectory();
-        
-        // Obtener PathType actual usando PathNavigationService
-        PathType currentType = pathNavigationService.resolvePathType(currentDir);
-        
-        // Validar permisos usando CommandPermissionService
-        if (!permissionService.canCreateComponent(currentType)) {
-            CommandResponse response = CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        String duName;
-        
-        // Determinar duName según el nivel usando NavigationPath
-        if (currentType == PathType.DU_LIB || currentType == PathType.DU_ONLINE) {
-            // Nivel 1: estamos en un DU
-            duName = currentDir;
-        } else if (currentType == PathType.FOLDER) {
-            // Nivel 2: estamos en una carpeta, obtener duName de NavigationPath
-            NavigationPath path = pathNavigationService.createPath(currentDir);
-            duName = path.getDuName();
-        } else {
-            CommandResponse response = CommandResponse.error("Cannot use 'apx add' in current location");
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Verify the DU exists
-        if (!architectureService.deploymentUnitExists(duName)) {
-            CommandResponse response = CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Get DU type to check if it's DU-LIB (not allowed)
-        DeploymentUnit.DeploymentUnitType duType = directoryNavigationService.getTypeWithCache(duName);
-        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            CommandResponse response = CommandResponse.error("Cannot add components to DU-LIB deployment units");
-            response.setPrompt(sessionState.getCurrentPrompt());
-            return response;
-        }
-        
-        // Set flag to indicate we're awaiting component selection
-        sessionState.setAwaitingComponentSelection(true);
-        
-        // Show menu for component type selection
-        CommandResponse response = CommandResponse.menu(
-            "Select component type:",
-            Arrays.asList(
-                "1. DTO (Data Transfer Objects)",
-                "2. Transaction (Business Transaction)",
-                "3. Library (Library Components)"
-            )
-        );
-        response.setPrompt(sessionState.getCurrentPrompt());
-        return response;
-    }
-    
+    /**
+     * Gets or creates session state for the given session ID
+     * 
+     * @param sessionId Session identifier
+     * @return FormState for this session
+     */
     private FormState getOrCreateSessionState(String sessionId) {
         FormState state = activeSessions.get(sessionId);
         if (state == null) {
@@ -433,141 +105,12 @@ public class CommandParserService {
     }
     
     /**
-     * Handles Y/n confirmation responses for any pending action
-     * Generic handler that dispatches to appropriate service based on action prefix
+     * Expose active sessions for handler access (legacy compatibility)
+     * Required by ActiveFormHandler and InitMenuHandler
+     * 
+     * @return Map of active sessions
      */
-    private CommandResponse handleConfirmation(FormState sessionState, String input) {
-        String action = sessionState.getAwaitingConfirmationFor();
-        sessionState.setAwaitingConfirmationFor(null); // Clear flag immediately
-        
-        String inputLower = input.trim().toLowerCase();
-        
-        // Check for explicit cancellation
-        if ("n".equals(inputLower)) {
-            // Clean up any pending data
-            cleanupPendingConfirmationData(sessionState);
-            return CommandResponse.success("Operation cancelled");
-        }
-        
-        // Accept confirmation: Y, y, or Enter (empty)
-        if ("y".equals(inputLower) || input.trim().isEmpty()) {
-            // Dispatch to appropriate service based on action prefix
-            if (action.startsWith("delete-component-")) {
-                return deletionCommandService.executeConfirmedDelete(action, sessionState);
-            }
-            if (action.startsWith("delete-dependency-")) {
-                return deletionCommandService.executeConfirmedDependencyDelete(action, sessionState);
-            }
-            if (action.startsWith("delete-input-")) {
-                return deletionCommandService.executeConfirmedInputDelete(action, sessionState);
-            }
-            if (action.startsWith("delete-output-")) {
-                return deletionCommandService.executeConfirmedOutputDelete(action, sessionState);
-            }
-            if (action.startsWith("create-component-")) {
-                return formProcessingService.executeConfirmedCreate(action, sessionState);
-            }
-            if (action.startsWith("create-dep-")) {
-                return dependencyCommandService.executeConfirmedDependencyCreate(action, sessionState);
-            }
-            
-            return CommandResponse.error("Unknown action: " + action);
-        }
-        
-        // Invalid response - re-prompt
-        sessionState.setAwaitingConfirmationFor(action); // Restore flag
-        return CommandResponse.error("Invalid response. Enter Y to confirm, n to cancel, or press Enter to confirm.");
+    public Map<String, FormState> getActiveSessions() {
+        return activeSessions;
     }
-    
-    /**
-     * Cleans up temporary data stored during confirmation flow
-     */
-    private void cleanupPendingConfirmationData(FormState sessionState) {
-        // Clean up pending create data (from apx init/add)
-        sessionState.getFormData().remove("pendingCreate_formType");
-        sessionState.getFormData().remove("pendingCreate_uuaa");
-        sessionState.getFormData().remove("pendingCreate_code");
-        sessionState.getFormData().remove("pendingCreate_className");
-        sessionState.getFormData().remove("pendingCreate_version");
-        sessionState.getFormData().remove("pendingCreate_country");
-        sessionState.getFormData().remove("pendingCreate_description");
-        sessionState.getFormData().remove("pendingCreate_deploymentUnit");
-        sessionState.getFormData().remove("pendingCreate_duName");
-        sessionState.getFormData().remove("pendingCreate_currentDir");
-        
-        // Clean up pending dependency data (from apx add dep)
-        sessionState.getFormData().remove("pendingDep_source");
-        sessionState.getFormData().remove("pendingDep_target");
-        
-        // Clean up pending deletion dependency data (from apx del dep)
-        sessionState.getFormData().remove("pendingDelDep_componentId");
-        sessionState.getFormData().remove("pendingDelDep_dependencyId");
-        sessionState.getFormData().remove("pendingDelDep_componentName");
-        sessionState.getFormData().remove("pendingDelDep_dependencyName");
-        
-        // Clean up pending in/out deletion data (from apx del in/out)
-        sessionState.getFormData().remove("pendingInOut_transactionId");
-        sessionState.getFormData().remove("pendingInOut_dtoId");
-        sessionState.getFormData().remove("pendingInOut_transactionName");
-        sessionState.getFormData().remove("pendingInOut_dtoName");
-        sessionState.getFormData().remove("pendingInOut_context");
-    }
-    
-    private CommandResponse showHelp() {
-        List<String> helpText = Arrays.asList(
-            "V-Ether - Available Commands:",
-            "",
-            "=== Standard Terminal Commands ===",
-            "cd <directory>           - Navigate to deployment unit or folder",
-            "cd ..                    - Go back to parent directory", 
-            "cd                       - Show current directory",
-            "pwd                      - Show current directory path",
-            "ls                       - List contents of current directory",
-            "clear                    - Clear terminal screen",
-            "exit                     - Exit the terminal",
-            "",
-            "=== APX Commands ===",
-            "apx init                 - Show interactive banking component menu",
-            "apx add                  - Add component in current directory",
-            "apx add dep              - Create dependency (interactive flow)",
-            "apx del                  - Delete component (context-aware)",
-            "apx del dep              - Delete dependency",
-            "apx show <name>          - Show details of a deployment unit",
-            "apx build                - Build transaction artifacts",
-            "apx check                - Check the artifact",
-            "apx completion           - Generate shell autocompletion script",
-            "apx config               - APX CLI configuration",
-            "apx deploy               - Deploy artifacts to local APX environment",
-            "apx formatter            - Format descriptor to XML",
-            "apx mod                  - Modify input or output configuration",
-            "apx mvn                  - Execute Maven commands",
-            "apx send                 - Send request",
-            "apx start                - Start architecture",
-            "apx upgrade              - Upgrade APX CLI",
-            "apx version              - Show APX CLI version",
-            "apx help                 - Show this help message",
-            "",
-            "=== Navigation Examples ===",
-            "cd customer-service      - Navigate to deployment unit",
-            "cd dto                   - Navigate to dto folder (from DU)",
-            "cd customer-service/dto  - Direct navigation to folder",
-            "cd ..                    - Go back one level",
-            "",
-            "=== APX Examples ===",
-            "apx init                 - Start interactive component creation",
-            "apx add dep              - Create dependency (guided workflow)",
-            "apx del                  - Delete component (menu varies by location)",
-            "apx show customer-service - Show DU details"
-        );
-        
-        return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
-    }
-    
-    /**
-     * Returns a standardized response for commands that are under development
-     */
-    private CommandResponse getUnderDevelopmentResponse(String command) {
-        return CommandResponse.error("This command is under development. The command 'apx " + command + "' is not yet available.");
-    }
-    
 }
