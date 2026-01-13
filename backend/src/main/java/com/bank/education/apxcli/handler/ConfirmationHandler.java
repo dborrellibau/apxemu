@@ -62,24 +62,40 @@ public class ConfirmationHandler extends CommandHandler {
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
         String action = sessionState.getAwaitingConfirmationFor();
-        sessionState.setAwaitingConfirmationFor(null); // Clear flag immediately
-        
         String inputLower = request.getCommand().trim().toLowerCase();
         
         // Check for explicit cancellation
         if ("n".equals(inputLower)) {
-            cleanupPendingConfirmationData(sessionState);
-            return CommandResponse.success("Operation cancelled");
+            // Create new session state without confirmation flag and pending data
+            FormState newState = createCleanSessionState(sessionState);
+            CommandResponse response = CommandResponse.success("Operation cancelled");
+            response.setNewSessionState(newState);
+            return response;
         }
         
         // Accept confirmation: Y, y, or Enter (empty)
         if ("y".equals(inputLower) || request.getCommand().trim().isEmpty()) {
-            return routeToService(action, sessionState);
+            CommandResponse response = routeToService(action, sessionState);
+            // Create new session state without confirmation flag and pending data
+            FormState newState = createCleanSessionState(sessionState);
+            response.setNewSessionState(newState);
+            return response;
         }
         
-        // Invalid response - re-prompt
-        sessionState.setAwaitingConfirmationFor(action); // Restore flag
+        // Invalid response - keep waiting for confirmation (no state change)
         return CommandResponse.error("Invalid response. Enter Y to confirm, n to cancel, or press Enter to confirm.");
+    }
+    
+    /**
+     * Creates a new session state with confirmation cleared
+     * Preserves directory but removes confirmation flag and pending data
+     */
+    private FormState createCleanSessionState(FormState oldState) {
+        FormState newState = new FormState();
+        newState.setCurrentDirectory(oldState.getCurrentDirectory());
+        // awaitingConfirmationFor is null by default (cleared)
+        // pendingCreate_* data is not copied (cleaned)
+        return newState;
     }
     
     /**
@@ -106,40 +122,5 @@ public class ConfirmationHandler extends CommandHandler {
         }
         
         return CommandResponse.error("Unknown action: " + action);
-    }
-    
-    /**
-     * Cleans up temporary data stored during confirmation flow
-     * Removes all pendingCreate_*, pendingDep_*, pendingDelDep_*, and pendingInOut_* keys
-     */
-    private void cleanupPendingConfirmationData(FormState sessionState) {
-        // Clean up pending create data (from apx init/add)
-        sessionState.getFormData().remove("pendingCreate_formType");
-        sessionState.getFormData().remove("pendingCreate_uuaa");
-        sessionState.getFormData().remove("pendingCreate_code");
-        sessionState.getFormData().remove("pendingCreate_className");
-        sessionState.getFormData().remove("pendingCreate_version");
-        sessionState.getFormData().remove("pendingCreate_country");
-        sessionState.getFormData().remove("pendingCreate_description");
-        sessionState.getFormData().remove("pendingCreate_deploymentUnit");
-        sessionState.getFormData().remove("pendingCreate_duName");
-        sessionState.getFormData().remove("pendingCreate_currentDir");
-        
-        // Clean up pending dependency data (from apx add dep)
-        sessionState.getFormData().remove("pendingDep_source");
-        sessionState.getFormData().remove("pendingDep_target");
-        
-        // Clean up pending deletion dependency data (from apx del dep)
-        sessionState.getFormData().remove("pendingDelDep_componentId");
-        sessionState.getFormData().remove("pendingDelDep_dependencyId");
-        sessionState.getFormData().remove("pendingDelDep_componentName");
-        sessionState.getFormData().remove("pendingDelDep_dependencyName");
-        
-        // Clean up pending in/out deletion data (from apx del in/out)
-        sessionState.getFormData().remove("pendingInOut_transactionId");
-        sessionState.getFormData().remove("pendingInOut_dtoId");
-        sessionState.getFormData().remove("pendingInOut_transactionName");
-        sessionState.getFormData().remove("pendingInOut_dtoName");
-        sessionState.getFormData().remove("pendingInOut_context");
     }
 }

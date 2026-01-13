@@ -176,23 +176,6 @@ public class CommandHandlerRegistry {
     }
     
     /**
-     * Sets activeSessions on handlers that need it (InitMenuHandler, ActiveFormHandler)
-     * Called by CommandParserService after construction to share the session Map
-     * 
-     * @param sessions The shared activeSessions Map
-     */
-    public void setActiveSessions(Map<String, FormState> sessions) {
-        for (CommandHandler handler : interactiveFlowHandlers) {
-            if (handler instanceof InitMenuHandler) {
-                ((InitMenuHandler) handler).setActiveSessions(sessions);
-            } else if (handler instanceof ActiveFormHandler) {
-                ((ActiveFormHandler) handler).setActiveSessions(sessions);
-            }
-        }
-        log.debug("Shared activeSessions Map with handlers that need it");
-    }
-    
-    /**
      * Debug utility to show handler execution order
      * Useful for troubleshooting priority conflicts
      * 

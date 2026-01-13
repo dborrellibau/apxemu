@@ -10,6 +10,7 @@ public class CommandResponse {
     private Object data;
     private String prompt; // Current prompt to show in terminal
     private String educationalHint; // Optional educational hint for user learning
+    private FormState newSessionState; // Optional: new FormState to replace current session
     
     public CommandResponse() {}
     
@@ -123,5 +124,13 @@ public class CommandResponse {
     
     public void setEducationalHint(String educationalHint) {
         this.educationalHint = educationalHint;
+    }
+    
+    public FormState getNewSessionState() {
+        return newSessionState;
+    }
+    
+    public void setNewSessionState(FormState newSessionState) {
+        this.newSessionState = newSessionState;
     }
 }
