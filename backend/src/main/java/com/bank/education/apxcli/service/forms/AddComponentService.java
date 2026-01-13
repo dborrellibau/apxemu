@@ -74,12 +74,19 @@ public class AddComponentService {
     }
     
     public CommandResponse startFormSession(String sessionId, String formType, String currentDirectory) {
+        System.out.println("[AddComponentService.startFormSession] sessionId=" + sessionId + ", formType=" + formType);
+        System.out.println("[AddComponentService] activeSessions Map identity: " + System.identityHashCode(activeSessions));
+        
         // Clear any existing form session but preserve directory state
         activeSessions.remove(sessionId);
         
         FormState formState = new FormState(formType);
         formState.setCurrentDirectory(currentDirectory);
         activeSessions.put(sessionId, formState);
+        
+        System.out.println("[AddComponentService] AFTER put - contains sessionId: " + activeSessions.containsKey(sessionId));
+        System.out.println("[AddComponentService] AFTER put - formState.formType: " + formState.getFormType());
+        
         return formPromptService.getNextFormPrompt(formState);
     }
     

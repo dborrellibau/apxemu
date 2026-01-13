@@ -48,9 +48,10 @@ public class CommandParserService {
         this.addComponentService = addComponentService;
         this.formInputService = formInputService;
         
-        // Share activeSessions with form services (legacy compatibility)
+        // Share activeSessions with form services and handlers (using setter injection)
         this.addComponentService.setActiveSessions(activeSessions);
         this.formInputService.setActiveSessions(activeSessions);
+        this.handlerRegistry.setActiveSessions(activeSessions);
         
         // Clear any residual sessions on startup
         this.activeSessions.clear();
@@ -66,8 +67,14 @@ public class CommandParserService {
     public CommandResponse parseCommand(CommandRequest request) {
         String sessionId = request.getSessionId() != null ? request.getSessionId() : "default";
         
+        // DEBUG: Log session state before processing
+        System.out.println("[CommandParserService] Processing command: '" + request.getCommand() + "' for session: " + sessionId);
+        System.out.println("[CommandParserService] activeSessions Map identity: " + System.identityHashCode(activeSessions));
+        System.out.println("[CommandParserService] activeSessions contents: " + activeSessions.keySet());
+        
         // Get or create session state
         FormState sessionState = getOrCreateSessionState(sessionId);
+        System.out.println("[CommandParserService] sessionState formType: " + (sessionState != null ? sessionState.getFormType() : "null"));
         
         // Delegate to handler registry (finds appropriate handler automatically)
         CommandResponse response = handlerRegistry.dispatch(request, sessionState);

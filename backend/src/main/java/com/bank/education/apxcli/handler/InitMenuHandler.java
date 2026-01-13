@@ -42,12 +42,14 @@ public class InitMenuHandler extends CommandHandler {
     }
     
     private final AddComponentService addComponentService;
-    private final Map<String, FormState> activeSessions;
+    private Map<String, FormState> activeSessions;
     
-    public InitMenuHandler(AddComponentService addComponentService,
-                          Map<String, FormState> activeSessions) {
+    public InitMenuHandler(AddComponentService addComponentService) {
         this.addComponentService = addComponentService;
-        this.activeSessions = activeSessions;
+    }
+    
+    public void setActiveSessions(Map<String, FormState> sessions) {
+        this.activeSessions = sessions;
     }
     
     @Override
@@ -62,7 +64,10 @@ public class InitMenuHandler extends CommandHandler {
     
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
+        String sessionId = request.getSessionId();
         String input = request.getCommand().trim().toLowerCase();
+        
+        System.out.println("[InitMenuHandler] BEFORE remove - activeSessions=" + System.identityHashCode(activeSessions) + ", contains sessionId: " + activeSessions.containsKey(sessionId));
         
         // Validate input: must be 1-5 or valid type name
         if (!input.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
@@ -85,8 +90,9 @@ public class InitMenuHandler extends CommandHandler {
         }
         
         // Clear session state before starting new form
-        activeSessions.remove(request.getSessionId());
+        activeSessions.remove(sessionId);
         sessionState.setAwaitingInitSelection(false);
+        System.out.println("[InitMenuHandler] AFTER remove - activeSessions=" + System.identityHashCode(activeSessions) + ", contains sessionId: " + activeSessions.containsKey(sessionId));
         
         // Start form session for selected component type
         return addComponentService.startFormSession(

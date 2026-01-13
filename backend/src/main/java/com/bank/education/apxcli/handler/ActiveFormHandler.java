@@ -35,12 +35,14 @@ public class ActiveFormHandler extends CommandHandler {
     public static final int PRIORITY = 70;
     
     private final FormInputService formInputService;
-    private final Map<String, FormState> activeSessions;
+    private Map<String, FormState> activeSessions;
     
-    public ActiveFormHandler(FormInputService formInputService,
-                            Map<String, FormState> activeSessions) {
+    public ActiveFormHandler(FormInputService formInputService) {
         this.formInputService = formInputService;
-        this.activeSessions = activeSessions;
+    }
+    
+    public void setActiveSessions(Map<String, FormState> sessions) {
+        this.activeSessions = sessions;
     }
     
     @Override
@@ -51,10 +53,20 @@ public class ActiveFormHandler extends CommandHandler {
     @Override
     public boolean canHandle(CommandRequest request, FormState sessionState) {
         String sessionId = request.getSessionId();
+        
+        // DEBUG: Log session lookup
+        System.out.println("[ActiveFormHandler] Checking canHandle for session: " + sessionId);
+        System.out.println("[ActiveFormHandler] activeSessions Map identity: " + System.identityHashCode(activeSessions));
+        System.out.println("[ActiveFormHandler] activeSessions contents: " + activeSessions.keySet());
+        
         FormState activeForm = activeSessions.get(sessionId);
+        System.out.println("[ActiveFormHandler] activeForm: " + activeForm);
+        System.out.println("[ActiveFormHandler] activeForm formType: " + (activeForm != null ? activeForm.getFormType() : "null"));
         
         // Handler activates if there's an active form with a formType set
-        return activeForm != null && activeForm.getFormType() != null;
+        boolean canHandle = activeForm != null && activeForm.getFormType() != null;
+        System.out.println("[ActiveFormHandler] canHandle result: " + canHandle);
+        return canHandle;
     }
     
     @Override
