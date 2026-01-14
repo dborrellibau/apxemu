@@ -5,8 +5,6 @@ import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 /**
  * Service responsible for handling "apx add" command workflow
  * Manages component type selection menu (DTO, Transaction, Library)
@@ -16,16 +14,11 @@ public class AddComponentService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final FormPromptService formPromptService;
-    private Map<String, FormState> activeSessions;
     
     public AddComponentService(ArchitectureOrchestrationService architectureService,
                               FormPromptService formPromptService) {
         this.architectureService = architectureService;
         this.formPromptService = formPromptService;
-    }
-    
-    public void setActiveSessions(Map<String, FormState> sessions) {
-        this.activeSessions = sessions;
     }
     
     public CommandResponse handleComponentSelection(String sessionId, String input, FormState sessionState) {
@@ -74,32 +67,35 @@ public class AddComponentService {
     }
     
     public CommandResponse startFormSession(String sessionId, String formType, String currentDirectory) {
-        // Clear any existing form session but preserve directory state
-        activeSessions.remove(sessionId);
-        
+        // Create new FormState for form wizard
         FormState formState = new FormState(formType);
         formState.setCurrentDirectory(currentDirectory);
-        activeSessions.put(sessionId, formState);
-        return formPromptService.getNextFormPrompt(formState);
+        
+        // Get first prompt
+        CommandResponse response = formPromptService.getNextFormPrompt(formState);
+        
+        // Attach new state so CommandParserService can replace session
+        response.setNewSessionState(formState);
+        
+        return response;
     }
     
     private CommandResponse startFormSessionWithUuaa(String sessionId, String formType, String duName, 
                                                      String uuaa, FormState sessionState) {
         String currentDirectory = sessionState.getCurrentDirectory();
         
-        // Clear any existing form session but preserve directory state
-        activeSessions.remove(sessionId);
-        
+        // Create new FormState with UUAA pre-filled
         FormState formState = new FormState(formType);
         formState.setCurrentDirectory(currentDirectory);
         formState.addData("uuaa", uuaa); // Pre-fill UUAA
         formState.addData("duName", duName); // Store DU name for later use
         formState.nextStep(); // Skip UUAA step
         
-        activeSessions.put(sessionId, formState);
-        
         // Get the next form prompt
         CommandResponse nextPrompt = formPromptService.getNextFormPrompt(formState);
+        
+        // Attach new state so CommandParserService can replace session
+        nextPrompt.setNewSessionState(formState);
         
         // Prepend UUAA information to the response message
         String uuaaMessage = "UUAA: " + uuaa;

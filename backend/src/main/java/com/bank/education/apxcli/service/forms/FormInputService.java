@@ -8,7 +8,6 @@ import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Service responsible for handling form input and validation
@@ -19,7 +18,6 @@ public class FormInputService {
     private final FormPromptService formPromptService;
     private final FormProcessingService formProcessingService;
     private final FormValidationService formValidationService;
-    private Map<String, FormState> activeSessions;
     
     public FormInputService(ArchitectureOrchestrationService architectureService,
         FormPromptService formPromptService,
@@ -29,10 +27,6 @@ public class FormInputService {
     this.formPromptService = formPromptService;
     this.formProcessingService = formProcessingService;
     this.formValidationService = formValidationService;
-    }
-    
-    public void setActiveSessions(Map<String, FormState> sessions) {
-        this.activeSessions = sessions;
     }
     
     public CommandResponse handleFormInput(String sessionId, String input, FormState formState, FormState sessionState) {
@@ -57,20 +51,18 @@ public class FormInputService {
         
         // Check if form is complete
         if (formState.isComplete()) {
-            // Save current directory before clearing session
+            // Save current directory before clearing form
             String currentDirectory = formState.getCurrentDirectory();
             
-            // Process the completed form - now returns confirmation prompt
+            // Process the completed form - this modifies sessionState with confirmation data
             CommandResponse result = formProcessingService.processCompleteForm(sessionId, formState, sessionState);
             
-            // Clear the active form session (user is no longer in form mode)
-            activeSessions.remove(sessionId);
-            
-            // Recreate session state to preserve directory navigation
+            // Create new session state (form cleared, preserve directory)
             FormState newSessionState = new FormState();
             newSessionState.setCurrentDirectory(currentDirectory);
             
-            // Copy confirmation flag if it was set (for continuation)
+            // CRITICAL: Copy confirmation flag that was JUST SET by processCompleteForm
+            // processCompleteForm sets awaitingConfirmationFor in sessionState
             if (sessionState.getAwaitingConfirmationFor() != null) {
                 newSessionState.setAwaitingConfirmationFor(sessionState.getAwaitingConfirmationFor());
                 // Copy pending data as well
@@ -81,8 +73,8 @@ public class FormInputService {
                 }
             }
             
-            activeSessions.put(sessionId, newSessionState);
-            
+            // Attach new state so CommandParserService can replace session
+            result.setNewSessionState(newSessionState);
             result.setPrompt(newSessionState.getCurrentPrompt());
             return result;
         }

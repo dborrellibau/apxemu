@@ -83,6 +83,9 @@ public class FormState {
     }
     
     public boolean isComplete() {
+        if (formType == null) {
+            return false;
+        }
         switch (formType) {
             case "dto":
                 return formData.containsKey("uuaa") && formData.containsKey("code") && 
