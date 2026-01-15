@@ -152,6 +152,11 @@ public class CommandHandlerRegistry {
             log.warn("StandardCommandHandler not found - standard commands will use fallback routing");
         }
         
+        handlers.stream()
+        .filter(h -> h.getName().equals("ResetCommandHandler"))
+        .findFirst()
+        .ifPresent(resetHandler -> map.put("reset", resetHandler));
+
         return map;
     }
     

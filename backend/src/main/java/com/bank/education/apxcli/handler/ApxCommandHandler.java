@@ -118,13 +118,7 @@ public class ApxCommandHandler extends CommandHandler {
             
             case "debug-du":
                 return infoCommandService.handleDebugDuCommand(subArgs);
-            
-            //case "reset":
-            //    return systemCommandService.handleResetSessionCommand(request.getSessionId(), activeSessions);
-            
-            case "reset-all":
-                return systemCommandService.handleResetAllSessionsCommand(activeSessions);
-            
+
             case "debug":
                 return infoCommandService.handleDebugSessionsCommand(activeSessions);
             
@@ -144,8 +138,8 @@ public class ApxCommandHandler extends CommandHandler {
             case "start":
             case "upgrade":
             case "version":
-                return getUnderDevelopmentResponse(subCommand);
-            
+                return CommandResponse.error("This command is under development. The command 'apx " + subCommand + "' is not yet available.");
+       
             default:
                 return CommandResponse.error("Unknown apx command: " + subCommand + ". Type 'apx help' for available commands.");
         }
@@ -316,7 +310,7 @@ public class ApxCommandHandler extends CommandHandler {
             "pwd                      - Show current directory path",
             "ls                       - List contents of current directory",
             "clear                    - Clear terminal screen",
-            "exit                     - Exit the terminal",
+            "reset                    - Clean current session",
             "",
             "=== APX Commands ===",
             "apx init                 - Show interactive banking component menu",
@@ -355,10 +349,4 @@ public class ApxCommandHandler extends CommandHandler {
         return new CommandResponse(true, "Help", helpText, CommandResponse.ResponseType.INFO, null);
     }
     
-    /**
-     * Returns a standardized response for commands that are under development
-     */
-    private CommandResponse getUnderDevelopmentResponse(String command) {
-        return CommandResponse.error("This command is under development. The command 'apx " + command + "' is not yet available.");
-    }
 }
