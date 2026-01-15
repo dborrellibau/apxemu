@@ -252,4 +252,20 @@ public class FormState {
         this.formData.remove("inOutMode");
         this.formData.remove("inOutComponent");
     }
+
+    public void reset() {
+    this.formType = null;
+    this.currentStep = 0;
+    this.formData.clear();
+    this.currentDirectory = "root";
+    this.awaitingComponentSelection = false;
+    this.awaitingInitSelection = false;
+    this.awaitingDependencySourceSelection = false;
+    this.awaitingDependencyTypeSelection = false;
+    this.awaitingDependencyArtifactId = false;
+    this.awaitingDeletionSelection = false;
+    this.inOutSelectionMode = false;
+    this.awaitingInOutDtoName = false;
+    this.awaitingConfirmationFor = null;
+}
 }

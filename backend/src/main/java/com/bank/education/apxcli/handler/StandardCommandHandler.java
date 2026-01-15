@@ -86,17 +86,6 @@ public class StandardCommandHandler extends CommandHandler {
                 response = CommandResponse.error("Unknown command: " + command);
         }
         
-        // Add educational hint if command was successful
-        if (response.isSuccess()) {
-            PathType currentPathType = pathNavigationService.resolvePathType(
-                sessionState.getCurrentDirectory()
-            );
-            String hint = hintService.getHintFor(request.getCommand(), currentPathType);
-            if (hint != null) {
-                response.setEducationalHint(hint);
-            }
-        }
-        
         return response;
     }
 }

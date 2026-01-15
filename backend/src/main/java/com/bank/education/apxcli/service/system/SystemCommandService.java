@@ -3,6 +3,8 @@ package com.bank.education.apxcli.service.system;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -13,6 +15,8 @@ import java.util.Map;
  */
 @Service
 public class SystemCommandService {
+    
+    private static final Logger log = LoggerFactory.getLogger(SystemCommandService.class);
     
     private final ArchitectureOrchestrationService architectureService;
     
@@ -43,10 +47,14 @@ public class SystemCommandService {
         return architectureService.clearAllDeploymentUnits();
     }
     
-    public CommandResponse handleResetSessionCommand(String sessionId, Map<String, FormState> activeSessions) {
-        activeSessions.remove(sessionId);
+    public CommandResponse handleResetSessionCommand(FormState sessionState) {
+    
+        if (sessionState != null) {
+            sessionState.reset(); // Limpia todos los flags y datos de la sesión
+        }
+        log.info("State {} has been reset.", sessionState);
         return CommandResponse.success("Session reset. You can now start new forms.");
-    }
+}
     
     public CommandResponse handleResetAllSessionsCommand(Map<String, FormState> activeSessions) {
         int cleared = activeSessions.size();

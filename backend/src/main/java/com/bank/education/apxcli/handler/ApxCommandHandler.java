@@ -119,8 +119,8 @@ public class ApxCommandHandler extends CommandHandler {
             case "debug-du":
                 return infoCommandService.handleDebugDuCommand(subArgs);
             
-            case "reset":
-                return systemCommandService.handleResetSessionCommand(request.getSessionId(), activeSessions);
+            //case "reset":
+            //    return systemCommandService.handleResetSessionCommand(request.getSessionId(), activeSessions);
             
             case "reset-all":
                 return systemCommandService.handleResetAllSessionsCommand(activeSessions);
