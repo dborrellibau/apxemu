@@ -44,7 +44,6 @@ public class ComponentSelectionHandler extends CommandHandler {
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
         return addComponentService.handleComponentSelection(
-            request.getSessionId(),
             request.getCommand(),
             sessionState
         );

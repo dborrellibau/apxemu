@@ -177,7 +177,7 @@ public class ApxCommandHandler extends CommandHandler {
         }
         
         // Normal "apx add" for components (shows 3-option menu: DTO, TRX, LIB)
-        return handleAddComponent(sessionId, sessionState);
+        return handleAddComponent(sessionState);
     }
     
     /**
@@ -196,38 +196,13 @@ public class ApxCommandHandler extends CommandHandler {
     /**
      * Handles "apx add" (component creation) - Shows 3-option menu
      */
-    private CommandResponse handleAddComponent(String sessionId, FormState sessionState) {
+    private CommandResponse handleAddComponent(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         PathType currentType = pathNavigationService.resolvePathType(currentDir);
         
         // Validate permissions
         if (!permissionService.canCreateComponent(currentType)) {
             return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
-        }
-        
-        String duName;
-        
-        // Determine duName based on current level
-        if (currentType == PathType.DU_LIB || currentType == PathType.DU_ONLINE) {
-            // Level 1: in a DU
-            duName = currentDir;
-        } else if (currentType == PathType.FOLDER) {
-            // Level 2: in a folder, get duName from NavigationPath
-            NavigationPath path = pathNavigationService.createPath(currentDir);
-            duName = path.getDuName();
-        } else {
-            return CommandResponse.error("Cannot use 'apx add' in current location");
-        }
-        
-        // Verify the DU exists
-        if (!architectureService.deploymentUnitExists(duName)) {
-            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-        }
-        
-        // Get DU type to check if it's DU-LIB (not allowed)
-        DeploymentUnit.DeploymentUnitType duType = directoryNavigationService.getTypeWithCache(duName);
-        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
         }
         
         // Set flag to indicate we're awaiting component selection
@@ -238,8 +213,8 @@ public class ApxCommandHandler extends CommandHandler {
             "Select component type:",
             Arrays.asList(
                 "1. DTO (Data Transfer Objects)",
-                "2. Transaction (Business Transaction)",
-                "3. Library (Library Components)"
+                "2. Library (Library Components)",
+                "3. Transaction (Business Transaction)"
             )
         );
     }

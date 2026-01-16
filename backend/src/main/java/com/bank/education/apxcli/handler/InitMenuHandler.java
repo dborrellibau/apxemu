@@ -48,7 +48,6 @@ public class InitMenuHandler extends CommandHandler {
 
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
-        String sessionId = request.getSessionId();
         String input = request.getCommand().trim().toLowerCase();
 
         if (menuValidationService.isNotImplemented(input)) {
@@ -64,7 +63,6 @@ public class InitMenuHandler extends CommandHandler {
 
         sessionState.setAwaitingInitSelection(false);
         return addComponentService.startFormSession(
-                sessionId,
                 formType,
                 sessionState.getCurrentDirectory());
     }
