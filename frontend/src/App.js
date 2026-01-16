@@ -84,7 +84,7 @@ function App() {
             onClick={toggleHints}
             title={showHints ? 'Ocultar hints educativos' : 'Mostrar hints educativos'}
           >
-            Hints
+            {showHints ? 'Hide hints' : 'Show hints'}
           </button>
           
           <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>

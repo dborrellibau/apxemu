@@ -21,7 +21,6 @@
   color: #ffffff;
   font-weight: bold;
   font-size: 0.9rem;
-  font-family: 'Courier New', monospace;
 }
 
 .hint-badge {
@@ -55,7 +54,6 @@
   font-size: 13px;
   line-height: 1.5;
   max-width: 280px;
-  font-family: 'Courier New', monospace;
 }
 
 /* Lista de Hints */
