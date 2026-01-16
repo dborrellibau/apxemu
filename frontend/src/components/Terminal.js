@@ -269,12 +269,8 @@ const Terminal = ({ wsService, isConnected, onHintReceived }) => {
   return (
     <div className="terminal" onClick={handleTerminalClick}>
       <div className="terminal-header">
-        <div className="terminal-title">V-Ether Terminal</div>
-        <div className={`connection-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
-          {isConnected ? 'Connected' : 'Disconnected'}
-        </div>
+        <div className="terminal-title">Terminal</div>
       </div>
-      
       <div className="terminal-body" ref={terminalRef}>
         <div className="terminal-content">
           {history.map((entry, index) => renderHistoryEntry(entry, index))}

@@ -196,7 +196,7 @@ const ReactFlowDiagram = ({ data }) => {
       <div className="react-flow-container empty">
         <div className="empty-state">
           <h4>No Architecture Data</h4>
-          <p>Create some deployment units to see the architecture</p>
+          <p>Create some units to see the architecture</p>
           <code>du-online "MyApp"</code>
         </div>
       </div>

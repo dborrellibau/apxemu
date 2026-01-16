@@ -5,11 +5,9 @@
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
   box-shadow: 
     0 4px 6px -1px rgba(0, 0, 0, 0.3), 
     0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(64, 64, 64, 0.8);
 }
 
 .react-flow-container.empty {

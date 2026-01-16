@@ -4,7 +4,6 @@
   height: 100%;
   background-color: #0c0c0c;
   color: #00ff00;
-  font-family: 'Courier New', monospace;
   font-size: 14px;
   cursor: text;
 }
@@ -69,6 +68,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 15px;
+  font-family: 'Courier New', monospace;
 }
 
 .terminal-content {
@@ -128,11 +128,11 @@
   background: transparent;
   border: none;
   color: #ffffff;
-  font-family: 'Courier New', monospace;
   font-size: 14px;
   outline: none;
   flex: 1;
   caret-color: #00ff00;
+  font-family: 'Courier New', monospace;
 }
 
 .terminal-input::selection {
