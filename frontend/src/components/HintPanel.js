@@ -4,7 +4,6 @@ import './HintPanel.css';
 const HintPanel = ({ hints }) => {
   const scrollRef = useRef(null);
 
-  // Auto-scroll al último hint (al inicio de la lista)
   useEffect(() => {
     if (scrollRef.current && hints.length > 0) {
       scrollRef.current.scrollTop = 0;
@@ -13,15 +12,9 @@ const HintPanel = ({ hints }) => {
 
   return (
     <div className="hint-panel">
-      {/* Header */}
       <div className="hint-panel-header">
-        <span className="hint-title">V-Ether Educational Hints</span>
-        {hints.length > 0 && (
-          <span className="hint-badge">{hints.length}</span>
-        )}
+        <span className="hint-title">Educational Hints</span>
       </div>
-
-      {/* Contenido */}
       <div className="hint-panel-content" ref={scrollRef}>
         {hints.length === 0 ? (
           <div className="hint-empty-state">
