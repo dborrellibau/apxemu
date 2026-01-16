@@ -4,10 +4,8 @@ import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.forms.AddComponentService;
+import com.bank.education.apxcli.service.validation.MenuValidationService;
 import org.springframework.stereotype.Component;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Handler for "apx init" menu selection (1-5 or type names)
@@ -26,71 +24,48 @@ import java.util.Map;
  */
 @Component
 public class InitMenuHandler extends CommandHandler {
-    
+
     public static final int PRIORITY = 30;
-    
-    private static final Map<String, String> INIT_MENU_MAP;
-    
-    static {
-        Map<String, String> map = new HashMap<>();
-        map.put("1", "du-online");
-        map.put("2", "du-lib");
-        map.put("3", "dto");
-        map.put("4", "lib");
-        map.put("5", "trx");
-        INIT_MENU_MAP = map;
-    }
-    
+
     private final AddComponentService addComponentService;
-    
-    public InitMenuHandler(AddComponentService addComponentService) {
+    private final MenuValidationService menuValidationService;
+
+    public InitMenuHandler(AddComponentService addComponentService,
+            MenuValidationService menuValidationService) {
         this.addComponentService = addComponentService;
+        this.menuValidationService = menuValidationService;
     }
-    
+
     @Override
     public int getPriority() {
         return PRIORITY;
     }
-    
+
     @Override
     public boolean canHandle(CommandRequest request, FormState sessionState) {
         return sessionState.isAwaitingInitSelection();
     }
-    
+
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
         String sessionId = request.getSessionId();
         String input = request.getCommand().trim().toLowerCase();
-        
-        // Validate input: must be 1-5 or valid type name
-        if (!input.matches("^(\\d+|du-online|du-lib|dto|lib|trx)$")) {
-            sessionState.setAwaitingInitSelection(false);
+
+        if (menuValidationService.isNotImplemented(input)) {
+            return CommandResponse.error("Not implemented yet. This component type is under construction.");
+        }
+
+        if (!menuValidationService.isValidInitSelection(input, 5)) {
             return CommandResponse.error(
-                "Invalid selection. Please choose 1-5 or type name (du-online, du-lib, dto, lib, trx)"
-            );
+                    "Invalid selection. Please choose again:");
         }
-        
-        // Convert numeric selection to type name
-        String formType = INIT_MENU_MAP.getOrDefault(input, input);
-        
-        // Validate numeric range (1-5)
-        if (input.matches("^\\d+$")) {
-            int selection = Integer.parseInt(input);
-            if (selection < 1 || selection > 5) {
-                sessionState.setAwaitingInitSelection(false);
-                return CommandResponse.error("Invalid selection. Please choose 1-5.");
-            }
-        }
-        
-        // Clear init selection flag
+
+        String formType = menuValidationService.getTypeForSelection(input);
+
         sessionState.setAwaitingInitSelection(false);
-        
-        // Start form session for selected component type
-        // AddComponentService returns new FormState in CommandResponse
         return addComponentService.startFormSession(
-            sessionId,
-            formType,
-            sessionState.getCurrentDirectory()
-        );
+                sessionId,
+                formType,
+                sessionState.getCurrentDirectory());
     }
 }
