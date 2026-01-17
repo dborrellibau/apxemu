@@ -151,32 +151,4 @@ public class DependencyManagementService {
         }
     }
     
-    /**
-     * Validates dependency relationship constraints
-     */
-    public CommandResponse validateDependency(String sourceName, String targetName) {
-        Optional<DeploymentUnit> sourceOpt = repository.findByName(sourceName);
-        Optional<DeploymentUnit> targetOpt = repository.findByName(targetName);
-        
-        if (!sourceOpt.isPresent()) {
-            return CommandResponse.error("Source unit does not exist");
-        }
-        
-        if (!targetOpt.isPresent()) {
-            return CommandResponse.error("Target unit does not exist");
-        }
-        
-        DeploymentUnit source = sourceOpt.get();
-        DeploymentUnit target = targetOpt.get();
-        
-        if (source.equals(target)) {
-            return CommandResponse.error("Unit cannot depend on itself");
-        }
-        
-        if (wouldCreateCircularDependency(source, target)) {
-            return CommandResponse.error("Would create circular dependency");
-        }
-        
-        return CommandResponse.success("Dependency is valid");
-    }
 }

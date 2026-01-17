@@ -55,6 +55,7 @@ public class ApxCommandHandler extends CommandHandler {
     private final PathNavigationService pathNavigationService;
     private final CommandPermissionService permissionService;
     private final Map<String, FormState> activeSessions;
+    private final DependencyFlowHandler dependencyFlowHandler;
     
     public ApxCommandHandler(InfoCommandService infoCommandService,
                             SystemCommandService systemCommandService,
@@ -65,7 +66,8 @@ public class ApxCommandHandler extends CommandHandler {
                             InOutCommandService inOutCommandService,
                             PathNavigationService pathNavigationService,
                             CommandPermissionService permissionService,
-                            Map<String, FormState> activeSessions) {
+                            Map<String, FormState> activeSessions,
+                            DependencyFlowHandler dependencyFlowHandler) {
         this.infoCommandService = infoCommandService;
         this.systemCommandService = systemCommandService;
         this.architectureService = architectureService;
@@ -76,6 +78,7 @@ public class ApxCommandHandler extends CommandHandler {
         this.pathNavigationService = pathNavigationService;
         this.permissionService = permissionService;
         this.activeSessions = activeSessions;
+        this.dependencyFlowHandler = dependencyFlowHandler;
     }
     
     @Override
@@ -108,7 +111,7 @@ public class ApxCommandHandler extends CommandHandler {
                 return handleInit(sessionState);
             
             case "add":
-                return handleAdd(request.getSessionId(), sessionState, subArgs);
+                return handleAdd(sessionState, subArgs);
             
             case "del":
                 return handleDel(sessionState, subArgs);
@@ -161,13 +164,13 @@ public class ApxCommandHandler extends CommandHandler {
     /**
      * Handles "apx add" and "apx add dep/in/out" - Component/dependency creation
      */
-    private CommandResponse handleAdd(String sessionId, FormState sessionState, String[] subArgs) {
+    private CommandResponse handleAdd(FormState sessionState, String[] subArgs) {
         // Check for subcommands: dep, in, out
         if (subArgs.length > 0) {
             String addSubCommand = subArgs[0].toLowerCase();
             
             if ("dep".equals(addSubCommand)) {
-                return handleAddDep(sessionState);
+                return dependencyCommandService.handleAddDepCommand(sessionState);
             } else if ("in".equals(addSubCommand)) {
                 return inOutCommandService.handleAddIn(sessionState);
             } else if ("out".equals(addSubCommand)) {
@@ -183,15 +186,7 @@ public class ApxCommandHandler extends CommandHandler {
     /**
      * Handles "apx add dep" - Dependency creation wizard
      */
-    private CommandResponse handleAddDep(FormState sessionState) {
-        // Validate permissions: apx add dep only allowed in components
-        PathType currentType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-        if (!permissionService.canCreateDependency(currentType)) {
-            return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentType));
-        }
-        
-        return dependencyCommandService.handleAddDepCommand(sessionState);
-    }
+
     
     /**
      * Handles "apx add" (component creation) - Shows 3-option menu

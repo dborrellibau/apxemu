@@ -5,8 +5,6 @@ import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.validation.MenuValidationService;
 
-import javafx.scene.control.Menu;
-
 import org.springframework.stereotype.Service;
 
 /**

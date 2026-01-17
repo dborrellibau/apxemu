@@ -272,43 +272,7 @@ class DependencyManagementServiceTest {
         assertTrue(result.contains(unitB));
         assertTrue(result.contains(unitC));
     }
-    
-    @Test
-    void validateDependency_WithValidUnits_ShouldReturnSuccess() {
-        // Arrange
-        String sourceName = "source-unit";
-        String targetName = "target-unit";
-        
-        DeploymentUnit sourceUnit = createTestDeploymentUnit(sourceName, 1L);
-        DeploymentUnit targetUnit = createTestDeploymentUnit(targetName, 2L);
-        
-        when(repository.findByName(sourceName)).thenReturn(Optional.of(sourceUnit));
-        when(repository.findByName(targetName)).thenReturn(Optional.of(targetUnit));
-        
-        // Act
-        CommandResponse result = dependencyService.validateDependency(sourceName, targetName);
-        
-        // Assert
-        assertTrue(result.isSuccess());
-        assertEquals("Dependency is valid", result.getOutput().get(0));
-    }
-    
-    @Test
-    void validateDependency_WithSelfDependency_ShouldReturnError() {
-        // Arrange
-        String unitName = "self-unit";
-        DeploymentUnit unit = createTestDeploymentUnit(unitName, 1L);
-        
-        when(repository.findByName(unitName)).thenReturn(Optional.of(unit));
-        
-        // Act
-        CommandResponse result = dependencyService.validateDependency(unitName, unitName);
-        
-        // Assert
-        assertFalse(result.isSuccess());
-        assertEquals("Unit cannot depend on itself", result.getOutput().get(0));
-    }
-    
+ 
     private DeploymentUnit createTestDeploymentUnit(String name, Long id) {
         DeploymentUnit unit = new DeploymentUnit();
         unit.setId(id);

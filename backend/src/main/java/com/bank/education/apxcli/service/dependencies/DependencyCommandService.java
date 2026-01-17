@@ -49,24 +49,17 @@ public class DependencyCommandService {
     public CommandResponse handleAddDepCommand(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         
-        // ROOT: cannot create dependency from root
-        if ("root".equals(currentDir)) {
-            return CommandResponse.error("Cannot create dependency from root. Navigate to a component first (cd <component-name>)");
-        }
-        
         // Get PathType and NavigationPath
         PathType pathType = pathNavigationService.resolvePathType(currentDir);
         NavigationPath path = pathNavigationService.createPath(currentDir);
         
         // Only allow from component level
-        if (pathType == PathType.COMPONENT_IN_FOLDER || 
-            pathType == PathType.COMPONENT_IN_DULIB || 
-            pathType == PathType.COMPONENT_STANDALONE) {
+        if (pathType.canCreateDependency()) {
             // Level 3: component - start dependency flow
             String componentName = path.getComponentName();
             return startDependencyFlow(sessionState, componentName);
         } else {
-            return CommandResponse.error("Command 'apx add dep' can only be executed from within a component. Navigate to a component first (cd <component-name>)");
+            return CommandResponse.error("Command 'apx add dep' can only be executed from within a component.");
         }
     }
     

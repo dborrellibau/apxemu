@@ -86,4 +86,10 @@ public enum PathType {
                this == DU_LIB || 
                this == FOLDER;
     }
+
+    public boolean canCreateDependency() {
+        return this == COMPONENT_IN_FOLDER || 
+               this == COMPONENT_IN_DULIB || 
+               this == COMPONENT_STANDALONE;
+    }
 }

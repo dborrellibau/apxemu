@@ -201,48 +201,6 @@ class ArchitectureServicesPerformanceTest {
     }
     
     @Test
-    void dependencyOperations_BulkDependencies_ShouldMaintainPerformance() {
-        // Create test data
-        for (int i = 1; i <= 20; i++) {
-            orchestrationService.createDto("DEP", String.format("%03d", i), "DepDto" + i, "Dependency test DTO " + i);
-            orchestrationService.createLib("DEP", String.format("%03d", i + 100), "Dependency test Library " + i);
-        }
-        
-        StopWatch stopWatch = new StopWatch("Bulk Dependencies Test");
-        
-        // Test bulk dependency creation
-        stopWatch.start("Create 20 dependencies");
-        for (int i = 1; i <= 20; i++) {
-            String libName = "DEPR" + String.format("%03d", i + 100);
-            String dtoName = "DEPC" + String.format("%03d", i);
-            
-            CommandResponse response = orchestrationService.createDependency(libName, dtoName);
-            assertTrue(response.isSuccess(), "Dependency creation " + i + " failed: " + response.getOutput());
-        }
-        stopWatch.stop();
-        
-        // Test bulk dependency validation
-        stopWatch.start("Validate 100 dependency possibilities");
-        for (int i = 1; i <= 100; i++) {
-            String sourceName = "DEPR" + String.format("%03d", ((i % 20) + 1) + 100);
-            String targetName = "DEPC" + String.format("%03d", ((i + 5) % 20) + 1);
-            
-            // This will check for circular dependencies
-            CommandResponse response = orchestrationService.validateDependency(sourceName, targetName);
-            // We don't assert success here because some may create circular dependencies
-            assertNotNull(response);
-        }
-        stopWatch.stop();
-        
-        // Dependency operations should be reasonable (under 8 seconds)
-        assertTrue(stopWatch.getTotalTimeMillis() < 8000, 
-            "Bulk dependencies took too long: " + stopWatch.getTotalTimeMillis() + "ms\n" + stopWatch.prettyPrint());
-        
-        System.out.println("Bulk Dependencies Performance:");
-        System.out.println(stopWatch.prettyPrint());
-    }
-    
-    @Test
     @EnabledIfEnvironmentVariable(named = "RUN_STRESS_TESTS", matches = "true")
     void stressTest_HighVolumeOperations_ShouldHandleGracefully() {
         StopWatch stopWatch = new StopWatch("Stress Test");
