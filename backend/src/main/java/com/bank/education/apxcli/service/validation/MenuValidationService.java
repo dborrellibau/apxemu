@@ -13,14 +13,11 @@ import java.util.Set;
 public class MenuValidationService {
 
     private static final Set<String> VALID_TYPES_INIT = Collections.unmodifiableSet(
-        new HashSet<>(Arrays.asList("du-online", "du-lib", "dto", "lib", "trx"))
-    );
+            new HashSet<>(Arrays.asList("du-online", "du-lib", "dto", "lib", "trx", "library", "transaction")));
     private static final Set<String> VALID_TYPES_ADD = Collections.unmodifiableSet(
-        new HashSet<>(Arrays.asList("dto", "lib", "trx"))
-    );
+            new HashSet<>(Arrays.asList("dto", "lib", "trx","library", "transaction")));
     private static final Set<String> NOT_IMPLEMENTED = Collections.unmodifiableSet(
-        new HashSet<>(Arrays.asList("6", "7", "8", "util", "job", "du-batch"))
-    );
+            new HashSet<>(Arrays.asList("6", "7", "8", "util", "job", "du-batch")));
 
     private static final Map<String, String> INIT_MENU_MAP;
     static {
@@ -30,7 +27,28 @@ public class MenuValidationService {
         map.put("3", "dto");
         map.put("4", "lib");
         map.put("5", "trx");
+        map.put("library", "lib");
+        map.put("transaction", "trx");
         INIT_MENU_MAP = Collections.unmodifiableMap(map);
+    }
+
+    private static final Map<String, String> ADD_MENU_MAP;
+    static {
+        Map<String, String> map = new HashMap<>();
+        map.put("1", "dto");
+        map.put("2", "trx");
+        map.put("3", "lib");
+        map.put("library", "lib");
+        map.put("transaction", "trx");
+        ADD_MENU_MAP = Collections.unmodifiableMap(map);
+    }
+
+    private static final Map<String, String> ADD_DEP_MENU_MAP;
+    static {
+        Map<String, String> map = new HashMap<>();
+        map.put("1", "dto");
+        map.put("2", "lib");
+        ADD_DEP_MENU_MAP = Collections.unmodifiableMap(map);
     }
 
     public boolean isNotImplemented(String input) {
@@ -60,9 +78,10 @@ public class MenuValidationService {
 
     public boolean isValidAddDepSelection(String input, String sourceType) {
         if (sourceType.equals("dto") || sourceType.equals("lib")) {
-            return (isValidNumber(input, 1) || input.equals("DTO"));
+            return (isValidNumber(input, 1) || input.equals("DTO") || input.equals("dto"));
         } else if (sourceType.equals("lib_impl") || sourceType.equals("trx")) {
-            return (isValidNumber(input, 2) || input.equals("DTO") || input.equals("LIB"));
+            return (isValidNumber(input, 2) || input.equals("DTO") || input.equals("LIB") || input.equals("dto")
+                    || input.equals("lib"));
         } else {
             return false;
         }
@@ -73,11 +92,10 @@ public class MenuValidationService {
     }
 
     public String getAddComponentTypeForSelection(String input) {
-        int n = Integer.parseInt(input) + 2;
-        return INIT_MENU_MAP.getOrDefault(String.valueOf(n), input);
+        return ADD_MENU_MAP.getOrDefault(input, input);
     }
 
     public String getAddDepSourceTypeForSelection(String input) {
-        return getAddComponentTypeForSelection(input);
+        return ADD_DEP_MENU_MAP.getOrDefault(input, input);
     }
 }

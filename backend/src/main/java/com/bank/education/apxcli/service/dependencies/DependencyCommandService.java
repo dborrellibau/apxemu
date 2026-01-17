@@ -127,7 +127,8 @@ public class DependencyCommandService {
                     .error("Invalid selection '" + input + "'. Please enter a valid type name or number.");
         }
 
-        selectedType = menuValidationService.getAddDepSourceTypeForSelection(input);
+        String lowerInput = input.toLowerCase().trim();
+        selectedType = menuValidationService.getAddDepSourceTypeForSelection(lowerInput);
 
         if (selectedType == null) {
             return CommandResponse.error("Invalid type '" + input + "'. Please enter a valid type name or number.");

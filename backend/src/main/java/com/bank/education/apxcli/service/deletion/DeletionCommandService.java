@@ -777,7 +777,6 @@ private CommandResponse showDeletionMenu(FormState sessionState, String contextN
         
         // Perform soft delete
         String componentName = component.getName();
-        String componentType = component.getType().getValue();
         component.setDeleted(true);
         deploymentUnitRepository.save(component);
         
