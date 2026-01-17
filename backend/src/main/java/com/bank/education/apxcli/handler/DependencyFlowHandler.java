@@ -3,9 +3,6 @@ package com.bank.education.apxcli.handler;
 import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.navigation.PathNavigationService;
-import com.bank.education.apxcli.navigation.model.PathType;
-import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
 import com.bank.education.apxcli.service.dependencies.DependencyCommandService;
 import org.springframework.stereotype.Component;
 

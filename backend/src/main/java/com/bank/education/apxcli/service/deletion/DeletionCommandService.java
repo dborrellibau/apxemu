@@ -7,7 +7,6 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
-import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import com.bank.education.apxcli.service.DiagramService;
 import com.bank.education.apxcli.util.ConfirmationMessages;
 import org.springframework.stereotype.Service;
@@ -30,17 +29,14 @@ import java.util.Set;
 @Service
 public class DeletionCommandService {
     
-    private final ArchitectureOrchestrationService architectureService;
     private final DeploymentUnitRepository deploymentUnitRepository;
     private final DiagramService diagramService;
     private final PathNavigationService pathNavigationService;
     
     public DeletionCommandService(
-            ArchitectureOrchestrationService architectureService,
             DeploymentUnitRepository deploymentUnitRepository,
             DiagramService diagramService,
             PathNavigationService pathNavigationService) {
-        this.architectureService = architectureService;
         this.deploymentUnitRepository = deploymentUnitRepository;
         this.diagramService = diagramService;
         this.pathNavigationService = pathNavigationService;

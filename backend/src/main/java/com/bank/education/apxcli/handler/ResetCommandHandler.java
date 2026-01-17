@@ -5,10 +5,6 @@ import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.system.SystemCommandService;
 
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,18 +17,13 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ResetCommandHandler extends CommandHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(ResetCommandHandler.class);
     
     private final SystemCommandService systemCommandService;
 
-    private final Map<String, FormState> activeSessions;
     public static final int PRIORITY = 1;
 
-    public ResetCommandHandler(SystemCommandService systemCommandService,
-        Map<String, FormState> activeSessions) {
+    public ResetCommandHandler(SystemCommandService systemCommandService) {
         this.systemCommandService = systemCommandService;
-        this.activeSessions = activeSessions;
     }
     @Override
     public int getPriority() {
@@ -48,7 +39,6 @@ public class ResetCommandHandler extends CommandHandler {
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
         String command = request.getCommand().toLowerCase().trim();
-        log.info("ResetCommandHandler handling command: {}", command);
         if (command.equals("reset")) {
             return systemCommandService.handleResetSessionCommand(sessionState);
         } 

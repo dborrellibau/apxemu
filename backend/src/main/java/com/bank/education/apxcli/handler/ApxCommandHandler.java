@@ -3,13 +3,9 @@ package com.bank.education.apxcli.handler;
 import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.navigation.PathNavigationService;
-import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
-import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
-import com.bank.education.apxcli.service.DeploymentUnitNavigationService;
 import com.bank.education.apxcli.service.dependencies.DependencyCommandService;
 import com.bank.education.apxcli.service.deletion.DeletionCommandService;
 import com.bank.education.apxcli.service.info.InfoCommandService;
@@ -47,38 +43,29 @@ public class ApxCommandHandler extends CommandHandler {
     
     private final InfoCommandService infoCommandService;
     private final SystemCommandService systemCommandService;
-    private final ArchitectureOrchestrationService architectureService;
-    private final DeploymentUnitNavigationService directoryNavigationService;
     private final DependencyCommandService dependencyCommandService;
     private final DeletionCommandService deletionCommandService;
     private final InOutCommandService inOutCommandService;
     private final PathNavigationService pathNavigationService;
     private final CommandPermissionService permissionService;
     private final Map<String, FormState> activeSessions;
-    private final DependencyFlowHandler dependencyFlowHandler;
     
     public ApxCommandHandler(InfoCommandService infoCommandService,
                             SystemCommandService systemCommandService,
-                            ArchitectureOrchestrationService architectureService,
-                            DeploymentUnitNavigationService directoryNavigationService,
                             DependencyCommandService dependencyCommandService,
                             DeletionCommandService deletionCommandService,
                             InOutCommandService inOutCommandService,
                             PathNavigationService pathNavigationService,
                             CommandPermissionService permissionService,
-                            Map<String, FormState> activeSessions,
-                            DependencyFlowHandler dependencyFlowHandler) {
+                            Map<String, FormState> activeSessions) {
         this.infoCommandService = infoCommandService;
         this.systemCommandService = systemCommandService;
-        this.architectureService = architectureService;
-        this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
         this.deletionCommandService = deletionCommandService;
         this.inOutCommandService = inOutCommandService;
         this.pathNavigationService = pathNavigationService;
         this.permissionService = permissionService;
         this.activeSessions = activeSessions;
-        this.dependencyFlowHandler = dependencyFlowHandler;
     }
     
     @Override

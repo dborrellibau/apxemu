@@ -7,8 +7,6 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
-import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
-import com.bank.education.apxcli.service.validation.ArtifactIdValidationService;
 import com.bank.education.apxcli.service.validation.MenuValidationService;
 import com.bank.education.apxcli.util.ConfirmationMessages;
 import org.springframework.stereotype.Service;
@@ -23,23 +21,17 @@ import java.util.List;
 public class DependencyCommandService {
 
     private final MenuValidationService menuValidationService;
-
-    private final ArchitectureOrchestrationService architectureService;
     private final DependencyManagementService dependencyManagementService;
     private final DeploymentUnitRepository deploymentUnitRepository;
-    private final ArtifactIdValidationService validationService;
     private final PathNavigationService pathNavigationService;
 
     public DependencyCommandService(
-            ArchitectureOrchestrationService architectureService,
             DependencyManagementService dependencyManagementService,
             DeploymentUnitRepository deploymentUnitRepository,
-            ArtifactIdValidationService validationService,
-            PathNavigationService pathNavigationService, MenuValidationService menuValidationService) {
-        this.architectureService = architectureService;
+            PathNavigationService pathNavigationService, 
+            MenuValidationService menuValidationService) {
         this.dependencyManagementService = dependencyManagementService;
         this.deploymentUnitRepository = deploymentUnitRepository;
-        this.validationService = validationService;
         this.pathNavigationService = pathNavigationService;
         this.menuValidationService = menuValidationService;
     }
@@ -67,6 +59,7 @@ public class DependencyCommandService {
             return CommandResponse.error("Command 'apx add dep' can only be executed from within a component.");
         }
     }
+
     /**
      * Detects component type from path and shows dependency type menu
      */
@@ -130,7 +123,8 @@ public class DependencyCommandService {
         String selectedType = null;
 
         if (!menuValidationService.isValidAddDepSelection(input, sourceType)) {
-            return CommandResponse.error("Invalid selection '" + input + "'. Please enter a valid type name or number.");
+            return CommandResponse
+                    .error("Invalid selection '" + input + "'. Please enter a valid type name or number.");
         }
 
         selectedType = menuValidationService.getAddDepSourceTypeForSelection(input);
@@ -210,36 +204,18 @@ public class DependencyCommandService {
         return dependencyManagementService.createDependency(sourceComponent, targetArtifactId);
     }
 
-    /**
-     * Gets list of allowed dependency types based on source component type
-     * 
-     * Dependency rules:
-     * - DTO can depend on: DTO
-     * - LIB can depend on: DTO
-     * - LIB_IMPL can depend on: LIB, DTO
-     * - TRX can depend on: LIB, DTO
-     */
+    private static final java.util.Map<String, List<String>> ALLOWED_DEP_TYPES = new java.util.HashMap<>();
+    static {
+        ALLOWED_DEP_TYPES.put("dto", java.util.Collections.singletonList("DTO (Data Transfer Objects)"));
+        ALLOWED_DEP_TYPES.put("lib", java.util.Collections.singletonList("DTO (Data Transfer Objects)"));
+        ALLOWED_DEP_TYPES.put("lib_impl",
+                java.util.Arrays.asList("DTO (Data Transfer Objects)", "Library (Library Components)"));
+        ALLOWED_DEP_TYPES.put("trx",
+                java.util.Arrays.asList("DTO (Data Transfer Objects)", "Library (Library Components)"));
+    }
+
     private List<String> getAllowedDependencyTypes(String sourceType) {
-        List<String> allowedTypes = new java.util.ArrayList<>();
-
-        switch (sourceType) {
-            case "dto":
-            case "lib":
-                // LIB -> DTO
-                allowedTypes.add("DTO");
-                break;
-            case "lib_impl":
-            case "trx":
-                // TRX -> LIB, DTO
-                allowedTypes.add("DTO");
-                allowedTypes.add("LIB");
-                break;
-            default:
-                // Unknown type, return empty list
-                break;
-        }
-
-        return allowedTypes;
+        return ALLOWED_DEP_TYPES.getOrDefault(sourceType, java.util.Collections.emptyList());
     }
 
 }
