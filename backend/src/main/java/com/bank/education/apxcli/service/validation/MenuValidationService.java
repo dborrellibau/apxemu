@@ -58,6 +58,16 @@ public class MenuValidationService {
         return isValidNumber(input, max) || isValidType(input, VALID_TYPES_ADD);
     }
 
+    public boolean isValidAddDepSelection(String input, String sourceType) {
+        if (sourceType.equals("dto") || sourceType.equals("lib")) {
+            return (isValidNumber(input, 1) || input.equals("DTO"));
+        } else if (sourceType.equals("lib_impl") || sourceType.equals("trx")) {
+            return (isValidNumber(input, 2) || input.equals("DTO") || input.equals("LIB"));
+        } else {
+            return false;
+        }
+    }
+
     public String getTypeForSelection(String input) {
         return INIT_MENU_MAP.getOrDefault(input, input);
     }
@@ -65,5 +75,9 @@ public class MenuValidationService {
     public String getAddComponentTypeForSelection(String input) {
         int n = Integer.parseInt(input) + 2;
         return INIT_MENU_MAP.getOrDefault(String.valueOf(n), input);
+    }
+
+    public String getAddDepSourceTypeForSelection(String input) {
+        return getAddComponentTypeForSelection(input);
     }
 }

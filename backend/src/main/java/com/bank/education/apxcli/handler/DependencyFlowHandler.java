@@ -21,7 +21,6 @@ import org.springframework.stereotype.Component;
  * 3. Artifact ID input (groupId:artifactId:version)
  * 
  * Each step is tracked by specific FormState flags:
- * - isAwaitingDependencySourceSelection()
  * - isAwaitingDependencyTypeSelection()
  * - isAwaitingDependencyArtifactId()
  * 
@@ -45,19 +44,13 @@ public class DependencyFlowHandler extends CommandHandler {
 
     @Override
     public boolean canHandle(CommandRequest request, FormState sessionState) {
-        return sessionState.isAwaitingDependencySourceSelection() ||
-                sessionState.isAwaitingDependencyTypeSelection() ||
+        return sessionState.isAwaitingDependencyTypeSelection() ||
                 sessionState.isAwaitingDependencyArtifactId();
     }
 
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
         String input = request.getCommand();
-
-        // Step 1: Source component selection
-        if (sessionState.isAwaitingDependencySourceSelection()) {
-            return dependencyCommandService.handleSourceComponentInput(sessionState, input);
-        }
 
         // Step 2: Dependency type selection
         if (sessionState.isAwaitingDependencyTypeSelection()) {
