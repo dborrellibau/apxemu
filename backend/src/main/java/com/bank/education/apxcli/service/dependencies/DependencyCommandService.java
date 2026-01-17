@@ -209,7 +209,7 @@ public class DependencyCommandService {
     static {
         ALLOWED_DEP_TYPES.put("dto", java.util.Collections.singletonList("DTO (Data Transfer Objects)"));
         ALLOWED_DEP_TYPES.put("lib", java.util.Collections.singletonList("DTO (Data Transfer Objects)"));
-        ALLOWED_DEP_TYPES.put("lib_impl",
+        ALLOWED_DEP_TYPES.put("lib-impl",
                 java.util.Arrays.asList("DTO (Data Transfer Objects)", "Library (Library Components)"));
         ALLOWED_DEP_TYPES.put("trx",
                 java.util.Arrays.asList("DTO (Data Transfer Objects)", "Library (Library Components)"));

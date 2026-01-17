@@ -48,6 +48,7 @@ public class MenuValidationService {
         Map<String, String> map = new HashMap<>();
         map.put("1", "dto");
         map.put("2", "lib");
+        map.put("library", "lib");
         ADD_DEP_MENU_MAP = Collections.unmodifiableMap(map);
     }
 
@@ -79,9 +80,9 @@ public class MenuValidationService {
     public boolean isValidAddDepSelection(String input, String sourceType) {
         if (sourceType.equals("dto") || sourceType.equals("lib")) {
             return (isValidNumber(input, 1) || input.equals("DTO") || input.equals("dto"));
-        } else if (sourceType.equals("lib_impl") || sourceType.equals("trx")) {
+        } else if (sourceType.equals("lib-impl") || sourceType.equals("trx")) {
             return (isValidNumber(input, 2) || input.equals("DTO") || input.equals("LIB") || input.equals("dto")
-                    || input.equals("lib"));
+                    || input.equals("lib") || input.equals("library"));
         } else {
             return false;
         }
