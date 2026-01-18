@@ -115,6 +115,8 @@ public class DependencyCommandService {
      */
     public CommandResponse handleDependencyTypeSelection(FormState sessionState, String input) {
         String sourceType = sessionState.getData("depSourceType");
+        String lowerInput = input.toLowerCase().trim();
+
         if (sourceType == null) {
             sessionState.clearDependencyFlowData();
             return CommandResponse.error("Session error: source type not found. Please try again.");
@@ -122,12 +124,11 @@ public class DependencyCommandService {
 
         String selectedType = null;
 
-        if (!menuValidationService.isValidAddDepSelection(input, sourceType)) {
+        if (!menuValidationService.isValidAddDepSelection(lowerInput, sourceType)) {
             return CommandResponse
                     .error("Invalid selection '" + input + "'. Please enter a valid type name or number.");
         }
 
-        String lowerInput = input.toLowerCase().trim();
         selectedType = menuValidationService.getAddDepSourceTypeForSelection(lowerInput);
 
         if (selectedType == null) {
