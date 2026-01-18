@@ -12,8 +12,8 @@ class WebSocketService {
     this.connected = false;
     this.connecting = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectInterval = 3000;
+    this.maxReconnectAttempts = Infinity;
+    this.reconnectInterval = 4000;
     this.sessionId = 'session-' + Math.random().toString(36).substr(2, 9); // Generate once and keep
     this.onConnect = null;
     this.onDisconnect = null;
@@ -39,7 +39,7 @@ class WebSocketService {
       }
       
       this.client = new Client({
-        webSocketFactory: () => new SockJS('/ws', null, {
+        webSocketFactory: () => new SockJS('http://localhost:8080/ws', null, {
           timeout: 7000 // Increase timeout slightly for more stable connection
         }),
         debug: () => {}, // Disable debug logging
