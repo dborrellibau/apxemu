@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -269,72 +268,5 @@ class ArchitectureOrchestrationServiceTest {
         verify(validationService).deploymentUnitExists(name);
         verify(infoService, never()).getDeploymentUnitDetails(any());
         verify(infoService, never()).getContainableInfo(any(), anyBoolean());
-    }
-    
-    @Test
-    void createValidatedDependency_WithValidUnits_ShouldCreateDependency() {
-        // Arrange
-        String sourceName = "source-unit";
-        String targetName = "target-unit";
-        
-        CommandResponse validationResponse = CommandResponse.success("Dependency is valid");
-        CommandResponse creationResponse = CommandResponse.success("Dependency created");
-        
-        when(validationService.deploymentUnitExists(sourceName)).thenReturn(true);
-        when(validationService.deploymentUnitExists(targetName)).thenReturn(true);
-        when(dependencyService.validateDependency(sourceName, targetName)).thenReturn(validationResponse);
-        when(dependencyService.createDependency(sourceName, targetName)).thenReturn(creationResponse);
-        
-        // Act
-        CommandResponse result = orchestrationService.createValidatedDependency(sourceName, targetName);
-        
-        // Assert
-        assertEquals(creationResponse, result);
-        verify(validationService).deploymentUnitExists(sourceName);
-        verify(validationService).deploymentUnitExists(targetName);
-        verify(dependencyService).validateDependency(sourceName, targetName);
-        verify(dependencyService).createDependency(sourceName, targetName);
-    }
-    
-    @Test
-    void createValidatedDependency_WithNonExistingSource_ShouldReturnError() {
-        // Arrange
-        String sourceName = "non-existing-source";
-        String targetName = "target-unit";
-        
-        when(validationService.deploymentUnitExists(sourceName)).thenReturn(false);
-        
-        // Act
-        CommandResponse result = orchestrationService.createValidatedDependency(sourceName, targetName);
-        
-        // Assert
-        assertFalse(result.isSuccess());
-        assertEquals("Source unit 'non-existing-source' does not exist", result.getOutput().get(0));
-        verify(validationService).deploymentUnitExists(sourceName);
-        verify(dependencyService, never()).validateDependency(any(), any());
-        verify(dependencyService, never()).createDependency(any(), any());
-    }
-    
-    @Test
-    void createValidatedDependency_WithInvalidDependency_ShouldReturnValidationError() {
-        // Arrange
-        String sourceName = "source-unit";
-        String targetName = "target-unit";
-        
-        CommandResponse validationResponse = CommandResponse.error("Would create circular dependency");
-        
-        when(validationService.deploymentUnitExists(sourceName)).thenReturn(true);
-        when(validationService.deploymentUnitExists(targetName)).thenReturn(true);
-        when(dependencyService.validateDependency(sourceName, targetName)).thenReturn(validationResponse);
-        
-        // Act
-        CommandResponse result = orchestrationService.createValidatedDependency(sourceName, targetName);
-        
-        // Assert
-        assertEquals(validationResponse, result);
-        verify(validationService).deploymentUnitExists(sourceName);
-        verify(validationService).deploymentUnitExists(targetName);
-        verify(dependencyService).validateDependency(sourceName, targetName);
-        verify(dependencyService, never()).createDependency(any(), any());
     }
 }

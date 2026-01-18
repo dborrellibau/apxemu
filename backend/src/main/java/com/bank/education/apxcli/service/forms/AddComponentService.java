@@ -3,6 +3,8 @@ package com.bank.education.apxcli.service.forms;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
+import com.bank.education.apxcli.service.validation.MenuValidationService;
+
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,60 +16,47 @@ public class AddComponentService {
     
     private final ArchitectureOrchestrationService architectureService;
     private final FormPromptService formPromptService;
+    private final MenuValidationService menuValidationService;
     
     public AddComponentService(ArchitectureOrchestrationService architectureService,
-                              FormPromptService formPromptService) {
+                              FormPromptService formPromptService,
+                              MenuValidationService menuValidationService) {
         this.architectureService = architectureService;
         this.formPromptService = formPromptService;
+        this.menuValidationService = menuValidationService;
     }
     
-    public CommandResponse handleComponentSelection(String sessionId, String input, FormState sessionState) {
+    public CommandResponse handleComponentSelection(String input, FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
-        
-        // Parse selection (1-3 or dto/transaction/library)
-        String componentType = null;
         String lowerInput = input.toLowerCase().trim();
         
-        if (lowerInput.matches("^[1-3]$")) {
-            int selection = Integer.parseInt(lowerInput);
-            switch (selection) {
-                case 1: componentType = "dto"; break;
-                case 2: componentType = "trx"; break;
-                case 3: componentType = "lib"; break;
-            }
-        } else if ("dto".equals(lowerInput)) {
-            componentType = "dto";
-        } else if ("transaction".equals(lowerInput)) {
-            componentType = "trx";
-        } else if ("library".equals(lowerInput)) {
-            componentType = "lib";
-        }
-        
-        if (componentType == null) {
+         // Validar y mapear usando MenuValidationService
+        if (!menuValidationService.isValidAddComponentSelection(lowerInput, 3)) {
             CommandResponse error = CommandResponse.error("Invalid selection. Enter 1-3 or type name (dto/transaction/library)");
             error.setPrompt(sessionState.getCurrentPrompt());
             return error;
         }
+
+        String componentType = menuValidationService.getAddComponentTypeForSelection(lowerInput);
         
         // Clear the awaiting flag
         sessionState.setAwaitingComponentSelection(false);
         
         // Get UUAA from DU-ONLINE
-        String duName = currentDir;
-        String duUuaa = architectureService.getDeploymentUnitUuaa(duName);
+        String duUuaa = architectureService.getDeploymentUnitUuaa(currentDir);
         
         if (duUuaa == null) {
-            CommandResponse error = CommandResponse.error("Could not retrieve UUAA from deployment unit: " + duName);
+            CommandResponse error = CommandResponse.error("Could not retrieve UUAA from deployment unit: " + currentDir);
             error.setPrompt(sessionState.getCurrentPrompt());
             return error;
         }
         
         // Start form session with UUAA pre-filled
-        return startFormSessionWithUuaa(sessionId, componentType, duName, duUuaa, sessionState);
+        return startFormSessionWithUuaa(componentType, currentDir, duUuaa, sessionState);
     }
     
-    public CommandResponse startFormSession(String sessionId, String formType, String currentDirectory) {
-        // Create new FormState for form wizard
+    public CommandResponse startFormSession(String formType, String currentDirectory) {
+        // Create new FormState for form
         FormState formState = new FormState(formType);
         formState.setCurrentDirectory(currentDirectory);
         
@@ -80,7 +69,7 @@ public class AddComponentService {
         return response;
     }
     
-    private CommandResponse startFormSessionWithUuaa(String sessionId, String formType, String duName, 
+    private CommandResponse startFormSessionWithUuaa(String formType, String duName, 
                                                      String uuaa, FormState sessionState) {
         String currentDirectory = sessionState.getCurrentDirectory();
         

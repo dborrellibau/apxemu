@@ -4,7 +4,6 @@ import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.form.FormBuilder;
 import com.bank.education.apxcli.form.FormField;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
 import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.List;
@@ -14,16 +13,13 @@ import java.util.List;
  */
 @Service
 public class FormInputService {
-    private final ArchitectureOrchestrationService architectureService;
     private final FormPromptService formPromptService;
     private final FormProcessingService formProcessingService;
     private final FormValidationService formValidationService;
     
-    public FormInputService(ArchitectureOrchestrationService architectureService,
-        FormPromptService formPromptService,
+    public FormInputService(FormPromptService formPromptService,
         FormProcessingService formProcessingService,
         FormValidationService formValidationService) {
-    this.architectureService = architectureService;
     this.formPromptService = formPromptService;
     this.formProcessingService = formProcessingService;
     this.formValidationService = formValidationService;

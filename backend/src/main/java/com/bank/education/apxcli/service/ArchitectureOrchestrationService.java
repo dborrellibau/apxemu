@@ -116,10 +116,6 @@ public class ArchitectureOrchestrationService {
         return dependencyService.removeDependency(sourceName, targetName);
     }
     
-    public CommandResponse validateDependency(String sourceName, String targetName) {
-        return dependencyService.validateDependency(sourceName, targetName);
-    }
-    
     // ===== QUERY OPERATIONS =====
     
     public CommandResponse listDeploymentUnits(String type) {
@@ -177,29 +173,6 @@ public class ArchitectureOrchestrationService {
         }
         
         return basicInfo.isSuccess() ? basicInfo : debugInfo;
-    }
-    
-    /**
-     * Validates and creates a dependency between units
-     */
-    public CommandResponse createValidatedDependency(String sourceName, String targetName) {
-        // Validate both units exist
-        if (!validationService.deploymentUnitExists(sourceName)) {
-            return CommandResponse.error("Source unit '" + sourceName + "' does not exist");
-        }
-        
-        if (!validationService.deploymentUnitExists(targetName)) {
-            return CommandResponse.error("Target unit '" + targetName + "' does not exist");
-        }
-        
-        // Validate dependency rules
-        CommandResponse validation = dependencyService.validateDependency(sourceName, targetName);
-        if (!validation.isSuccess()) {
-            return validation;
-        }
-        
-        // Create the dependency
-        return dependencyService.createDependency(sourceName, targetName);
     }
     
     /**

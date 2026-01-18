@@ -3,13 +3,9 @@ package com.bank.education.apxcli.handler;
 import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
-import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.navigation.PathNavigationService;
-import com.bank.education.apxcli.navigation.model.NavigationPath;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.navigation.permission.CommandPermissionService;
-import com.bank.education.apxcli.service.ArchitectureOrchestrationService;
-import com.bank.education.apxcli.service.DeploymentUnitNavigationService;
 import com.bank.education.apxcli.service.dependencies.DependencyCommandService;
 import com.bank.education.apxcli.service.deletion.DeletionCommandService;
 import com.bank.education.apxcli.service.info.InfoCommandService;
@@ -47,8 +43,6 @@ public class ApxCommandHandler extends CommandHandler {
     
     private final InfoCommandService infoCommandService;
     private final SystemCommandService systemCommandService;
-    private final ArchitectureOrchestrationService architectureService;
-    private final DeploymentUnitNavigationService directoryNavigationService;
     private final DependencyCommandService dependencyCommandService;
     private final DeletionCommandService deletionCommandService;
     private final InOutCommandService inOutCommandService;
@@ -58,8 +52,6 @@ public class ApxCommandHandler extends CommandHandler {
     
     public ApxCommandHandler(InfoCommandService infoCommandService,
                             SystemCommandService systemCommandService,
-                            ArchitectureOrchestrationService architectureService,
-                            DeploymentUnitNavigationService directoryNavigationService,
                             DependencyCommandService dependencyCommandService,
                             DeletionCommandService deletionCommandService,
                             InOutCommandService inOutCommandService,
@@ -68,8 +60,6 @@ public class ApxCommandHandler extends CommandHandler {
                             Map<String, FormState> activeSessions) {
         this.infoCommandService = infoCommandService;
         this.systemCommandService = systemCommandService;
-        this.architectureService = architectureService;
-        this.directoryNavigationService = directoryNavigationService;
         this.dependencyCommandService = dependencyCommandService;
         this.deletionCommandService = deletionCommandService;
         this.inOutCommandService = inOutCommandService;
@@ -108,7 +98,7 @@ public class ApxCommandHandler extends CommandHandler {
                 return handleInit(sessionState);
             
             case "add":
-                return handleAdd(request.getSessionId(), sessionState, subArgs);
+                return handleAdd(sessionState, subArgs);
             
             case "del":
                 return handleDel(sessionState, subArgs);
@@ -161,13 +151,13 @@ public class ApxCommandHandler extends CommandHandler {
     /**
      * Handles "apx add" and "apx add dep/in/out" - Component/dependency creation
      */
-    private CommandResponse handleAdd(String sessionId, FormState sessionState, String[] subArgs) {
+    private CommandResponse handleAdd(FormState sessionState, String[] subArgs) {
         // Check for subcommands: dep, in, out
         if (subArgs.length > 0) {
             String addSubCommand = subArgs[0].toLowerCase();
             
             if ("dep".equals(addSubCommand)) {
-                return handleAddDep(sessionState);
+                return dependencyCommandService.handleAddDepCommand(sessionState);
             } else if ("in".equals(addSubCommand)) {
                 return inOutCommandService.handleAddIn(sessionState);
             } else if ("out".equals(addSubCommand)) {
@@ -177,57 +167,24 @@ public class ApxCommandHandler extends CommandHandler {
         }
         
         // Normal "apx add" for components (shows 3-option menu: DTO, TRX, LIB)
-        return handleAddComponent(sessionId, sessionState);
+        return handleAddComponent(sessionState);
     }
     
     /**
      * Handles "apx add dep" - Dependency creation wizard
      */
-    private CommandResponse handleAddDep(FormState sessionState) {
-        // Validate permissions: apx add dep only allowed in components
-        PathType currentType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-        if (!permissionService.canCreateDependency(currentType)) {
-            return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add dep", currentType));
-        }
-        
-        return dependencyCommandService.handleAddDepCommand(sessionState);
-    }
+
     
     /**
      * Handles "apx add" (component creation) - Shows 3-option menu
      */
-    private CommandResponse handleAddComponent(String sessionId, FormState sessionState) {
+    private CommandResponse handleAddComponent(FormState sessionState) {
         String currentDir = sessionState.getCurrentDirectory();
         PathType currentType = pathNavigationService.resolvePathType(currentDir);
         
         // Validate permissions
         if (!permissionService.canCreateComponent(currentType)) {
             return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx add", currentType));
-        }
-        
-        String duName;
-        
-        // Determine duName based on current level
-        if (currentType == PathType.DU_LIB || currentType == PathType.DU_ONLINE) {
-            // Level 1: in a DU
-            duName = currentDir;
-        } else if (currentType == PathType.FOLDER) {
-            // Level 2: in a folder, get duName from NavigationPath
-            NavigationPath path = pathNavigationService.createPath(currentDir);
-            duName = path.getDuName();
-        } else {
-            return CommandResponse.error("Cannot use 'apx add' in current location");
-        }
-        
-        // Verify the DU exists
-        if (!architectureService.deploymentUnitExists(duName)) {
-            return CommandResponse.error("Deployment unit '" + duName + "' does not exist");
-        }
-        
-        // Get DU type to check if it's DU-LIB (not allowed)
-        DeploymentUnit.DeploymentUnitType duType = directoryNavigationService.getTypeWithCache(duName);
-        if (duType == DeploymentUnit.DeploymentUnitType.DU_LIB) {
-            return CommandResponse.error("Cannot add components to DU-LIB deployment units");
         }
         
         // Set flag to indicate we're awaiting component selection
@@ -238,8 +195,8 @@ public class ApxCommandHandler extends CommandHandler {
             "Select component type:",
             Arrays.asList(
                 "1. DTO (Data Transfer Objects)",
-                "2. Transaction (Business Transaction)",
-                "3. Library (Library Components)"
+                "2. Library (Library Components)",
+                "3. Transaction (Business Transaction)"
             )
         );
     }

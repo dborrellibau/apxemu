@@ -36,24 +36,6 @@ public class CommandPermissionService {
                currentType == PathType.COMPONENT_IN_DULIB ||
                currentType == PathType.COMPONENT_STANDALONE;
     }
-
-    /**
-     * Valida si se puede crear una dependencia desde la posición actual
-     * Permitido en: COMPONENT_IN_FOLDER, COMPONENT_IN_DULIB, COMPONENT_STANDALONE
-     */
-    public boolean canCreateDependency(PathType currentType) {
-        return currentType == PathType.COMPONENT_IN_FOLDER ||
-               currentType == PathType.COMPONENT_IN_DULIB ||
-               currentType == PathType.COMPONENT_STANDALONE;
-    }
-
-    /**
-     * Valida si se puede eliminar una dependencia desde la posición actual
-     * Mismo criterio que crear dependencia
-     */
-    public boolean canDeleteDependency(PathType currentType) {
-        return canCreateDependency(currentType);
-    }
     
     /**
      * Valida si se puede agregar inputs/outputs a una transacción desde la posición actual
@@ -117,38 +99,6 @@ public class CommandPermissionService {
             if (!"LIB".equalsIgnoreCase(componentType) && 
                 !"LIB-IMPL".equalsIgnoreCase(componentType)) {
                 return "En DU-LIB solo se pueden crear componentes de tipo LIB o LIB-IMPL";
-            }
-        }
-        
-        return null; // Válido
-    }
-
-    /**
-     * Valida reglas de dependencias según tipos de componentes
-     * Retorna mensaje de error si no es válido, o null si es válido
-     */
-    public String validateDependencyRules(String sourceType, String targetType) {
-        // DTO solo puede depender de DTO
-        if ("DTO".equalsIgnoreCase(sourceType)) {
-            if (!"DTO".equalsIgnoreCase(targetType)) {
-                return "Componentes DTO solo pueden depender de otros DTOs";
-            }
-        }
-        
-        // LIB puede depender de DTO y LIB
-        if ("LIB".equalsIgnoreCase(sourceType)) {
-            if (!"DTO".equalsIgnoreCase(targetType) && 
-                !"LIB".equalsIgnoreCase(targetType)) {
-                return "Componentes LIB solo pueden depender de DTO o LIB";
-            }
-        }
-        
-        // TRX puede depender de DTO, LIB y TRX
-        if ("TRX".equalsIgnoreCase(sourceType)) {
-            if (!"DTO".equalsIgnoreCase(targetType) && 
-                !"LIB".equalsIgnoreCase(targetType) &&
-                !"TRX".equalsIgnoreCase(targetType)) {
-                return "Componentes TRX solo pueden depender de DTO, LIB o TRX";
             }
         }
         

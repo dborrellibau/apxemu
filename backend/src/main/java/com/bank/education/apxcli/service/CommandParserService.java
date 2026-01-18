@@ -7,8 +7,6 @@ import com.bank.education.apxcli.handler.CommandHandlerRegistry;
 import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.service.educational.EducationalHintService;
-import com.bank.education.apxcli.service.forms.AddComponentService;
-import com.bank.education.apxcli.service.forms.FormInputService;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -32,21 +30,15 @@ public class CommandParserService {
     private final CommandHandlerRegistry handlerRegistry;
     private final PathNavigationService pathNavigationService;
     private final EducationalHintService hintService;
-    private final AddComponentService addComponentService;
-    private final FormInputService formInputService;
     
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
     
     public CommandParserService(CommandHandlerRegistry handlerRegistry,
                                PathNavigationService pathNavigationService,
-                               EducationalHintService hintService,
-                               AddComponentService addComponentService,
-                               FormInputService formInputService) {
+                               EducationalHintService hintService) {
         this.handlerRegistry = handlerRegistry;
         this.pathNavigationService = pathNavigationService;
         this.hintService = hintService;
-        this.addComponentService = addComponentService;
-        this.formInputService = formInputService;
         
         // Clear any residual sessions on startup
         this.activeSessions.clear();

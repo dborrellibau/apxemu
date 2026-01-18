@@ -12,7 +12,6 @@ public class FormState {
     private boolean awaitingInitSelection;      // Flag for apx init menu selection
     
     // Dependency flow flags
-    private boolean awaitingDependencySourceSelection; // Flag for selecting source component (levels 1-2)
     private boolean awaitingDependencyTypeSelection;   // Flag for selecting dependency type
     private boolean awaitingDependencyArtifactId;      // Flag for entering artifact ID
     
@@ -31,7 +30,6 @@ public class FormState {
         this.currentDirectory = "root";
         this.awaitingComponentSelection = false;
         this.awaitingInitSelection = false;
-        this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
         this.awaitingDeletionSelection = false;
@@ -140,15 +138,6 @@ public class FormState {
         this.awaitingInitSelection = awaitingInitSelection;
     }
     
-    // Dependency flow getters and setters
-    public boolean isAwaitingDependencySourceSelection() {
-        return awaitingDependencySourceSelection;
-    }
-    
-    public void setAwaitingDependencySourceSelection(boolean awaitingDependencySourceSelection) {
-        this.awaitingDependencySourceSelection = awaitingDependencySourceSelection;
-    }
-    
     public boolean isAwaitingDependencyTypeSelection() {
         return awaitingDependencyTypeSelection;
     }
@@ -169,7 +158,6 @@ public class FormState {
      * Clears all dependency flow flags and temporary data
      */
     public void clearDependencyFlowData() {
-        this.awaitingDependencySourceSelection = false;
         this.awaitingDependencyTypeSelection = false;
         this.awaitingDependencyArtifactId = false;
         clearPendingDepData();
@@ -260,7 +248,6 @@ public class FormState {
     this.currentDirectory = "root";
     this.awaitingComponentSelection = false;
     this.awaitingInitSelection = false;
-    this.awaitingDependencySourceSelection = false;
     this.awaitingDependencyTypeSelection = false;
     this.awaitingDependencyArtifactId = false;
     this.awaitingDeletionSelection = false;

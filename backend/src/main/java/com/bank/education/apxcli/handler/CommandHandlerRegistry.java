@@ -172,7 +172,6 @@ public class CommandHandlerRegistry {
                sessionState.isAwaitingDeletionSelection() ||
                sessionState.isAwaitingInitSelection() ||
                sessionState.isAwaitingComponentSelection() ||
-               sessionState.isAwaitingDependencySourceSelection() ||
                sessionState.isAwaitingDependencyTypeSelection() ||
                sessionState.isAwaitingDependencyArtifactId() ||
                sessionState.isInOutSelectionMode() ||
