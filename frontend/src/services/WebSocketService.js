@@ -12,7 +12,7 @@ class WebSocketService {
     this.connected = false;
     this.connecting = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = Infinity;
+    this.maxReconnectAttempts = 20;
     this.reconnectInterval = 4000;
     this.sessionId = 'session-' + Math.random().toString(36).substr(2, 9); // Generate once and keep
     this.onConnect = null;
