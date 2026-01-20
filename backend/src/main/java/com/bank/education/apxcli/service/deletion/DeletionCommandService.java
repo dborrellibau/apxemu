@@ -237,17 +237,16 @@ public class DeletionCommandService {
         String folderName = sessionState.getData("deletionFolder");
         int componentCount = Integer.parseInt(sessionState.getData("deletionComponentCount"));
 
-        List<DeploymentUnit> components = deploymentUnitQueryService
-                .getComponentsInFolder(duName, folderName)
-                .orElseGet(() -> {
-                    sessionState.clearDeletionFlowData();
-                    CommandResponse.error("Deployment Unit '" + duName + "' not found or no components in folder '"
-                            + folderName + "'");
-                    return null;
-                });
-        if (components == null)
-            return CommandResponse.error("Error retrieving components.");
+        Optional<List<DeploymentUnit>> componentsOpt = deploymentUnitQueryService
+                .getComponentsInFolder(duName, folderName);
 
+        if (!componentsOpt.isPresent()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Deployment Unit '" + duName + "' not found or no components in folder '"
+                    + folderName + "'");
+        }
+
+        List<DeploymentUnit> components = componentsOpt.get();
         DeploymentUnit selectedComponent = selectByNumberOrName(
                 components, input, componentCount, DeploymentUnit::getName);
 
