@@ -21,29 +21,30 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. Educational hint injection on successful commands
  * 4. Prompt management
  * 
- * All command processing logic has been moved to specialized CommandHandler implementations.
+ * All command processing logic has been moved to specialized CommandHandler
+ * implementations.
  * See com.bank.education.apxcli.handler package for handler implementations.
  */
 @Service
 public class CommandParserService {
-    
+
     private final CommandHandlerRegistry handlerRegistry;
     private final PathNavigationService pathNavigationService;
     private final EducationalHintService hintService;
-    
+
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
-    
+
     public CommandParserService(CommandHandlerRegistry handlerRegistry,
-                               PathNavigationService pathNavigationService,
-                               EducationalHintService hintService) {
+            PathNavigationService pathNavigationService,
+            EducationalHintService hintService) {
         this.handlerRegistry = handlerRegistry;
         this.pathNavigationService = pathNavigationService;
         this.hintService = hintService;
-        
+
         // Clear any residual sessions on startup
         this.activeSessions.clear();
     }
-    
+
     /**
      * Main entry point for command processing
      * Delegates to CommandHandlerRegistry which routes to appropriate handler
@@ -53,37 +54,41 @@ public class CommandParserService {
      */
     public CommandResponse parseCommand(CommandRequest request) {
         String sessionId = request.getSessionId() != null ? request.getSessionId() : "default";
-        
+
         // Get or create session state
         FormState sessionState = getOrCreateSessionState(sessionId);
-        
+
         // Delegate to handler registry (finds appropriate handler automatically)
         CommandResponse response = handlerRegistry.dispatch(request, sessionState);
-        
+
         // Check if handler wants to replace the session state
         if (response.getNewSessionState() != null) {
             activeSessions.put(sessionId, response.getNewSessionState());
             // Update sessionState reference for hint/prompt processing below
             sessionState = response.getNewSessionState();
         }
-        
+
         // Add educational hint if command was successful
         if (response.isSuccess()) {
             PathType currentPathType = pathNavigationService.resolvePathType(
-                sessionState.getCurrentDirectory()
-            );
-            String hint = hintService.getHintFor(request.getCommand(), currentPathType);
+                    sessionState.getCurrentDirectory());
+            String fullCommand = request.getCommand();
+            String[] args = request.getArgs();
+            if (args != null && args.length > 0) {
+                fullCommand += " " + args[0];
+            }
+            String hint = hintService.getHintFor(fullCommand, currentPathType);
             if (hint != null) {
                 response.setEducationalHint(hint);
             }
         }
-        
+
         // Always set current prompt
         response.setPrompt(sessionState.getCurrentPrompt());
-        
+
         return response;
     }
-    
+
     /**
      * Gets or creates session state for the given session ID
      * 
@@ -98,7 +103,7 @@ public class CommandParserService {
         }
         return state;
     }
-    
+
     /**
      * Expose active sessions for handler access (legacy compatibility)
      * Required by ActiveFormHandler and InitMenuHandler
