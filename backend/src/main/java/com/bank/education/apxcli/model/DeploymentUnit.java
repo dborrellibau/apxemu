@@ -336,18 +336,18 @@ public class DeploymentUnit implements Containable {
     }
 
     public List<DeploymentUnit> getComponentsInFolder(String folderName) {
-    if (folderName == null) return new ArrayList<>();
-    String normalizedFolderName = normalizeFolderName(folderName);
-    for (ComponentFolder folder : this.getComponentFolders()) {
-        String folderTypeName = folder.getType().name();
-        if (folderTypeName.equalsIgnoreCase(normalizedFolderName)) {
-            return folder.getContainedUnits().stream()
-                    .filter(unit -> !unit.isDeleted())
-                    .collect(Collectors.toList());
+        if (folderName == null) return new ArrayList<>();
+        String normalizedFolderName = normalizeFolderName(folderName);
+        for (ComponentFolder folder : this.getComponentFolders()) {
+            String folderTypeName = folder.getType().name();
+            if (folderTypeName.equalsIgnoreCase(normalizedFolderName)) {
+                return folder.getContainedUnits().stream()
+                        .filter(unit -> !unit.isDeleted())
+                        .collect(Collectors.toList());
+            }
         }
+        return new ArrayList<>();
     }
-    return new ArrayList<>();
-}
     
     private String normalizeFolderName(String folderName) {
         String lower = folderName.toLowerCase().trim();
