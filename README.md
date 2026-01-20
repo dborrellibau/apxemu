@@ -1,7 +1,7 @@
 # APX CLI Banking Education Emulator
 
 ## Descripción
-Aplicación educativa interactiva que emula comandos APX CLI para la enseñanza de arquitectura de software bancario. Proporciona una interfaz de terminal clásica combinada con visualización de diagramas de arquitectura en tiempo real.
+Aplicación educativa interactiva que emula comandos APX CLI para la enseñanza de arquitectura de software bancario. Proporciona una interfaz de terminal clásica combinada con visualización de diagramas de arquitectura en tiempo real, junto a una pestaña opcional de tooltips.
 
 ## Inicio Rápido
 
