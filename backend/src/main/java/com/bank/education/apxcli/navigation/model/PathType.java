@@ -97,8 +97,6 @@ public enum PathType {
         return this.canCreateDependency();
     }
 
-    
-
     public boolean canDelete() {
         return this == PathType.DU_ONLINE || 
                this == PathType.COMPONENT_IN_FOLDER ||

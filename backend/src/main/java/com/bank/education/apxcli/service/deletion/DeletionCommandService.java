@@ -87,11 +87,11 @@ public class DeletionCommandService {
     private CommandResponse showDeletionMenu(FormState sessionState, String contextName, PathType pathType) {
         // Cabecera simple (se mostrará en azul)
         StringBuilder header = new StringBuilder();
-        header.append("Seleccione el tipo de elemento a eliminar:\n");
+        header.append("Select the type of element to delete:\n");
 
-        // Opciones (se mostrarán en amarillo, como los items de apx init)
+        // Opciones (se mostrán en amarillo, como los items de apx init)
         java.util.List<String> options = java.util.Arrays.asList(
-                "1. dep     - Dependencia",
+                "1. dep     - Dependency",
                 "2. dto     - Data Transfer Object",
                 "3. job     - Job",
                 "4. lib     - Library",
