@@ -3,7 +3,6 @@ package com.bank.education.apxcli.service;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.model.DeploymentUnit;
 import com.bank.education.apxcli.repository.DeploymentUnitRepository;
-import com.bank.education.apxcli.service.dependencies.DependencyManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -26,19 +25,10 @@ class ArchitectureServicesIntegrationTest {
     private ArchitectureOrchestrationService orchestrationService;
     
     @Autowired
-    private ContainableCreationService creationService;
-    
-    @Autowired
     private ContainableValidationService validationService;
     
     @Autowired
     private ContainableInfoService infoService;
-    
-    @Autowired
-    private DependencyManagementService dependencyService;
-    
-    @Autowired
-    private DeploymentUnitQueryService queryService;
     
     @MockBean
     private DiagramService diagramService;

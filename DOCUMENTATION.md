@@ -25,6 +25,7 @@
   - `forms/` - Procesamiento de formularios con validación
   - `validation/` - Validación de códigos bancarios
   - `permission/` - Sistema centralizado de permisos por PathType
+  - `strategy/` - Implementaciones del patrón DeploymentUnitStrategy
 - **Sistema de Navegación**: PathNavigationService con 7 PathTypes para navegación type-safe
 - **Gestión de Transacciones**: @Transactional para prevenir LazyInitializationException
 
@@ -38,59 +39,59 @@
 ### Estructura del Proyecto
 ```
 apxemu/
-├── backend/                          # Aplicación Spring Boot
+├── backend/
 │   ├── src/main/java/com/bank/education/apxcli/
-│   │   ├── controller/              # Controladores REST y WebSocket
-│   │   ├── dto/                     # Data Transfer Objects (FormState, CommandResponse)
-│   │   ├── model/                   # Entidades JPA (DeploymentUnit, ComponentFolder)
-│   │   ├── repository/              # Capa de acceso a datos
-│   │   ├── navigation/              # Sistema de navegación centralizado
-│   │   │   ├── PathNavigationService.java    # Navegación type-safe
-│   │   │   ├── model/               # PathType, NavigationPath
-│   │   │   ├── navigator/           # PathNavigator para transiciones
-│   │   │   ├── parser/              # PathParser para segmentos
-│   │   │   ├── resolver/            # PathTypeResolver con caché
-│   │   │   ├── validator/           # PathValidator con @Transactional
-│   │   │   └── permission/          # CommandPermissionService centralizado
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── model/
+│   │   ├── repository/
+│   │   ├── navigation/
+│   │   │   ├── PathNavigationService.java
+│   │   │   ├── model/
+│   │   │   ├── navigator/
+│   │   │   ├── parser/
+│   │   │   ├── resolver/
+│   │   │   ├── validator/
+│   │   │   └── permission/
 │   │   ├── service/
-│   │   │   ├── deletion/            # Servicio de comandos de eliminación
-│   │   │   ├── dependencies/        # Gestión de dependencias
-│   │   │   ├── forms/               # Procesamiento de formularios y prompts
-│   │   │   ├── info/                # Comandos de información y show
-│   │   │   ├── navigation/          # Comandos de navegación (cd, pwd, ls)
-│   │   │   ├── system/              # Comandos de sistema (help, clear)
-│   │   │   ├── validation/          # Validación de códigos bancarios
-│   │   │   ├── CommandParserService.java          # Router principal de comandos
-│   │   │   ├── ContainableCreationService.java    # Creación de componentes
-│   │   │   ├── ContainableInfoService.java        # Consultas de componentes
-│   │   │   └── DiagramService.java                # Actualizaciones de diagrama vía WebSocket
-│   │   └── config/                  # Configuración de seguridad y WebSocket
+│   │   │   ├── deletion/
+│   │   │   ├── dependencies/
+│   │   │   ├── forms/
+│   │   │   ├── info/
+│   │   │   ├── navigation/
+│   │   │   ├── system/
+│   │   │   ├── validation/
+│   │   │   ├── strategy/                # Estrategias de DeploymentUnit
+│   │   │   ├── CommandParserService.java
+│   │   │   ├── ContainableCreationService.java
+│   │   │   ├── ContainableInfoService.java
+│   │   │   └── DiagramService.java
+│   │   └── config/
 │   └── src/main/resources/
-│       ├── application.properties   # Configuración de Spring Boot
-│       └── static/                  # Archivos React compilados (producción)
+│       ├── application.properties
+│       └── static/
 │
-├── frontend/                         # Aplicación React
+├── frontend/
 │   ├── public/
-│   │   └── index.html               # Template HTML
+│   │   └── index.html
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Terminal.js          # Componente de interfaz de terminal
-│   │   │   ├── Terminal.css         # Estilos del terminal
-│   │   │   ├── ReactFlowDiagram.js  # Diagrama de arquitectura
-│   │   │   ├── ReactFlowDiagram.css # Estilos del diagrama
-│   │   │   ├── CustomNode.js        # Renderizador de nodos personalizados
-│   │   │   ├── HierarchicalRenderer.js  # Layout jerárquico
+│   │   │   ├── Terminal.js
+│   │   │   ├── Terminal.css
+│   │   │   ├── ReactFlowDiagram.js
+│   │   │   ├── ReactFlowDiagram.css
+│   │   │   ├── CustomNode.js
+│   │   │   ├── HierarchicalRenderer.js
 │   │   │   └── HierarchicalRenderer.css
 │   │   ├── services/
-│   │   │   └── WebSocketService.js  # Cliente WebSocket
+│   │   │   └── WebSocketService.js
 │   │   ├── utils/
-│   │   │   └── dataConverter.js     # Conversión de datos backend a formato ReactFlow
-│   │   ├── App.js                   # Componente principal de aplicación
-│   │   ├── App.css                  # Estilos de aplicación
-│   │   └── index.js                 # Punto de entrada de aplicación
-│   └── package.json                 # Dependencias de Node
-│
-└── pom.xml                          # Configuración Maven multi-módulo
+│   │   │   └── dataConverter.js
+│   │   ├── App.js
+│   │   ├── App.css
+│   │   └── index.js
+│   └── package.json
+└── pom.xml
 ```
 
 ## Entidades Principales
@@ -456,7 +457,6 @@ Muestra todos los comandos disponibles con ejemplos.
 V-Ether/root> apx init
 
 # Seguir prompts para crear DU-ONLINE "customer-service"
-[Aparece menú interactivo]
 > Seleccionar: 1 (DU-ONLINE)
 > Nombre: customer-service
 > Descripción: Servicio de gestión de clientes
@@ -468,13 +468,22 @@ V-Ether/customer-service> apx add
 
 # Seleccionar DTO
 > Seleccionar: 1 (DTO)
-> Nombre: CUSTDTO001
-> Descripción: Objeto de datos de cliente
+> Código: 001
+> Clase: CustomerDto
+> Descripción: Data transfer object de cliente
+> Confirmar: y
+
+Created DTO 'CUSTC001' in customer-service/dto
 
 # Agregar componente de librería
 V-Ether/customer-service> apx add
-> Seleccionar: 2 (Library)
-> Nombre: CUSTLIB001
+> Seleccionar: 3 (Library)
+> Código: 001
+> Clase: CustomerLib
+> Descripción: Librería de cliente
+> Confirmar: y
+
+Created Library 'CUSTLIB001' in customer-service/library
 
 # Ver la estructura
 V-Ether/customer-service> apx show
@@ -484,80 +493,56 @@ V-Ether/customer-service> apx show
 ### Ejemplo 2: Creando Dependencias
 
 ```bash
-# Crear dos componentes primero (usando apx init o apx add)
-# Luego crear dependencia
+# Navegar a componente origen
+V-Ether/customer-service/library/CUSTLIB001> apx add dep
 
-V-Ether/root> apx add dep
+Select dependency type for CUSTLIB001 (LIB):
+1. DTO
 
-# Paso 1: Seleccionar origen
-Seleccionar componente origen (o DU):
-1. customer-service
-2. account-service
 > 1
 
-# Paso 2: Seleccionar destino
-Seleccionar componente destino:
-1. account-service
-2. user-service
-> 1
+Enter artifact ID of the dependency (DTO):
+> CUSTC001
 
-# Confirmación
-¿Crear dependencia: customer-service → account-service? (Y/n)
-> Y
+Do you want to continue with the operation? (Y/n):
+> y
 
-# Dependencia creada, diagrama se actualiza automáticamente
+Created dependency: CUSTLIB001 -> CUSTC001
 ```
 
 ### Ejemplo 3: Navegando y Explorando
 
 ```bash
-# Listar todos los componentes
 V-Ether/root> apx list
 
-# Navegar a un DU
 V-Ether/root> cd customer-service
 
-# Listar contenido de carpetas
 V-Ether/customer-service> ls
 dto/
 library/
 transactions/
 
-# Navegar a carpeta
 V-Ether/customer-service> cd dto
 
-# Listar componentes en carpeta
 V-Ether/customer-service/dto> ls
 CUSTDTO001 (dto)
 CUSTDTO002 (dto)
 
-# Navegar a componente
 V-Ether/customer-service/dto> cd CUSTDTO001
 
-# Mostrar detalles del componente
 V-Ether/customer-service/dto/CUSTDTO001> apx show
 ```
 
 ### Ejemplo 4: Eliminando Componentes
 
 ```bash
-# Eliminar desde nivel de componente (directo)
 V-Ether/customer-service/dto/CUSTDTO001> apx del
 ¿Eliminar componente 'CUSTDTO001'? (Y/n): Y
 Componente 'CUSTDTO001' eliminado
 
-# Eliminar desde nivel de carpeta (menú)
-V-Ether/customer-service/dto> apx del
-¿Qué desea eliminar?
-1. dto (carpeta completa)
-2. CUSTDTO002
-> 2
-¿Eliminar componente 'CUSTDTO002'? (Y/n): Y
-
-# Componentes eliminados aparecen en rojo al listar
 V-Ether/customer-service/dto> ls
 CUSTDTO001 (dto) [DELETED]
-CUSTDTO002 (dto) [DELETED]
+CUSTDTO002 (dto)
 ```
 
 ## Desarrollo y Debugging
@@ -782,4 +767,4 @@ Este proyecto es para propósitos educativos dentro de programas de entrenamient
 
 ---
 
-**V-Ether** - Sistema de Entrenamiento en Arquitectura Bancaria Virtual
+**V-Ether** 

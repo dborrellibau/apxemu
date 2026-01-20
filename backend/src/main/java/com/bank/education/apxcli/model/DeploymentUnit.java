@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -333,7 +334,40 @@ public class DeploymentUnit implements Containable {
             setParentDeploymentUnit(null);
         }
     }
+
+    public List<DeploymentUnit> getComponentsInFolder(String folderName) {
+        if (folderName == null) return new ArrayList<>();
+        String normalizedFolderName = normalizeFolderName(folderName);
+        for (ComponentFolder folder : this.getComponentFolders()) {
+            String folderTypeName = folder.getType().name();
+            if (folderTypeName.equalsIgnoreCase(normalizedFolderName)) {
+                return folder.getContainedUnits().stream()
+                        .filter(unit -> !unit.isDeleted())
+                        .collect(Collectors.toList());
+            }
+        }
+        return new ArrayList<>();
+    }
     
+    private String normalizeFolderName(String folderName) {
+        String lower = folderName.toLowerCase().trim();
+        switch (lower) {
+            case "dto":
+            case "dtos":
+                return "DTO";
+            case "lib":
+            case "library":
+            case "libs":
+                return "LIBRARY";
+            case "trx":
+            case "transaction":
+            case "transactions":
+                return "TRANSACTIONS";
+            default:
+                return folderName.toUpperCase();
+        }
+    }
+
     public enum DeploymentUnitType {
         DU_ONLINE("du-online"),
         DU_LIB("du-lib"),

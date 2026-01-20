@@ -52,6 +52,18 @@ public class MenuValidationService {
         ADD_DEP_MENU_MAP = Collections.unmodifiableMap(map);
     }
 
+    private static final Map<String, String> DELETE_MENU_MAP;
+    static {
+        Map<String, String> map = new HashMap<>();
+        map.put("1", "dep");
+        map.put("2", "dto");
+        map.put("3", "job");
+        map.put("4", "lib");
+        map.put("5", "trx");
+        map.put("6", "util");
+        DELETE_MENU_MAP = Collections.unmodifiableMap(map);
+    }
+
     public boolean isNotImplemented(String input) {
         return NOT_IMPLEMENTED.contains(input);
     }
@@ -88,6 +100,14 @@ public class MenuValidationService {
         }
     }
 
+public boolean isValidDeleteTypeSelection(String lowerInput) {
+    if (lowerInput != null && lowerInput.length() == 1 && Character.isDigit(lowerInput.charAt(0))) {
+        return isValidNumber(lowerInput, 6);
+    }
+    // También puedes validar por nombre de tipo si lo deseas
+    return Arrays.asList("dep", "dto", "job", "lib", "trx", "util").contains(lowerInput);
+}
+
     public String getTypeForSelection(String input) {
         return INIT_MENU_MAP.getOrDefault(input, input);
     }
@@ -98,5 +118,9 @@ public class MenuValidationService {
 
     public String getAddDepSourceTypeForSelection(String input) {
         return ADD_DEP_MENU_MAP.getOrDefault(input, input);
+    }
+
+    public String getDeleteTypeForSelection(String input) {
+        return DELETE_MENU_MAP.getOrDefault(input, input);
     }
 }

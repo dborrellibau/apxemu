@@ -92,4 +92,15 @@ public enum PathType {
                this == COMPONENT_IN_DULIB || 
                this == COMPONENT_STANDALONE;
     }
+
+    public boolean canDeleteDependency() {
+        return this.canCreateDependency();
+    }
+
+    public boolean canDelete() {
+        return this == PathType.DU_ONLINE || 
+               this == PathType.COMPONENT_IN_FOLDER ||
+               this == PathType.COMPONENT_IN_DULIB ||
+               this == PathType.COMPONENT_STANDALONE;
+    }
 }
