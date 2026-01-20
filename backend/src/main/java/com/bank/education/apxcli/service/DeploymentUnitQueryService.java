@@ -8,7 +8,9 @@ import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -109,5 +111,17 @@ public class DeploymentUnitQueryService {
         return repository.findByName(duName)
             .map(DeploymentUnit::getUuaa)
             .orElse(null);
+    }
+
+    public Optional<List<DeploymentUnit>> getComponentsInFolder(String duName, String folderName) {
+        Optional<DeploymentUnit> duOpt = repository.findByName(duName);
+        if (!duOpt.isPresent()) {
+            return Optional.empty();
+        }
+        List<DeploymentUnit> components = duOpt.get().getComponentsInFolder(folderName);
+        if (components.isEmpty()) {
+            return Optional.of(new ArrayList<>());
+        }
+        return Optional.of(components);
     }
 }

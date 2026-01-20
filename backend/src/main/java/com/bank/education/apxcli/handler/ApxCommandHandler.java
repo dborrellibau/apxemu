@@ -218,7 +218,7 @@ public class ApxCommandHandler extends CommandHandler {
         
         // Normal "apx del" (component deletion)
         PathType currentType = pathNavigationService.resolvePathType(sessionState.getCurrentDirectory());
-        if (!permissionService.canDelete(currentType)) {
+        if (!currentType.canDelete()) {
             return CommandResponse.error(permissionService.getPermissionDeniedMessage("apx del", currentType));
         }
         
