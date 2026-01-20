@@ -238,24 +238,21 @@ public class DeletionCommandService {
         String folderName = sessionState.getData("deletionFolder");
         int componentCount = Integer.parseInt(sessionState.getData("deletionComponentCount"));
 
-        List<DeploymentUnit> components = deploymentUnitQueryService
-                .getComponentsInFolder(duName, folderName)
-                .orElseGet(() -> {
-                    sessionState.clearDeletionFlowData();
-                    CommandResponse.error("Deployment Unit '" + duName + "' not found or no components in folder '"
-                            + folderName + "'");
-                    return null;
-                });
-        if (components == null)
-            return CommandResponse.error("Error retrieving components.");
-
+        Optional<List<DeploymentUnit>> componentsOptional = deploymentUnitQueryService
+                .getComponentsInFolder(duName, folderName);
+        if (componentsOptional.isEmpty()) {
+            sessionState.clearDeletionFlowData();
+            return CommandResponse.error("Deployment Unit '" + duName + "' not found or no components in folder '"
+                    + folderName + "'");
+        }
+        List<DeploymentUnit> components = componentsOptional.get();
 
         DeploymentUnit selectedComponent = selectByNumberOrName(
-        components, input, componentCount, DeploymentUnit::getName);
+                components, input, componentCount, DeploymentUnit::getName);
 
-    if (selectedComponent == null) {
-        return CommandResponse.error("Component '" + input.trim() + "' not found. Please enter a valid number or component name.");
-    }
+        if (selectedComponent == null) {
+            return CommandResponse.error("Component '" + input.trim() + "' not found. Please enter a valid number or component name.");
+        }
 
         sessionState.clearDeletionFlowData();
         return showComponentDeletionConfirmation(sessionState, duName, folderName, selectedComponent.getName());
