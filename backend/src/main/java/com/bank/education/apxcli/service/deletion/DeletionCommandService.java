@@ -176,7 +176,6 @@ public class DeletionCommandService {
         return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
     }
 
-
     /**
      * Handle type selection based on PathType context
      * Validates allowed types based on where command was executed
@@ -249,13 +248,13 @@ public class DeletionCommandService {
         if (components == null)
             return CommandResponse.error("Error retrieving components.");
 
-
         DeploymentUnit selectedComponent = selectByNumberOrName(
-        components, input, componentCount, DeploymentUnit::getName);
+                components, input, componentCount, DeploymentUnit::getName);
 
-    if (selectedComponent == null) {
-        return CommandResponse.error("Component '" + input.trim() + "' not found. Please enter a valid number or component name.");
-    }
+        if (selectedComponent == null) {
+            return CommandResponse.error(
+                    "Component '" + input.trim() + "' not found. Please enter a valid number or component name.");
+        }
 
         sessionState.clearDeletionFlowData();
         return showComponentDeletionConfirmation(sessionState, duName, folderName, selectedComponent.getName());
@@ -324,11 +323,11 @@ public class DeletionCommandService {
         DeploymentUnit selectedDep = null;
 
         selectedDep = selectByNumberOrName(
-        dependencies, input, depCount, DeploymentUnit::getName);
+                dependencies, input, depCount, DeploymentUnit::getName);
 
-    if (selectedDep == null) {
-        return CommandResponse.error("Error: The dependency '" + input.trim() + "' is not found");
-    }
+        if (selectedDep == null) {
+            return CommandResponse.error("Error: The dependency '" + input.trim() + "' is not found");
+        }
 
         // Store pending data for confirmation
         sessionState.addData("pendingDelDep_componentId", component.getId().toString());
@@ -345,18 +344,25 @@ public class DeletionCommandService {
         return CommandResponse.info(ConfirmationMessages.STANDARD_CONFIRMATION);
     }
 
-    private <T> T selectByNumberOrName(List<T> items, String input, int maxCount, java.util.function.Function<T, String> nameExtractor) {
-    String trimmed = input.trim();
-    if (menuValidationService.isValidNumber(trimmed, maxCount)) {
-        int selection = Integer.parseInt(trimmed);
-        return items.get(selection - 1);
-    } else {
+    private <T> T selectByNumberOrName(List<T> items, String input, int maxCount,
+            java.util.function.Function<T, String> nameExtractor) {
+        String trimmed = input.trim();
+        if (menuValidationService.isValidNumber(trimmed, maxCount)) {
+            try {
+                int selection = Integer.parseInt(trimmed);
+                if (selection >= 1 && selection <= items.size()) {
+                    return items.get(selection - 1);
+                }
+                // If out of range, fall through to name-based selection below
+            } catch (NumberFormatException ex) {
+                // If parsing fails despite validation, fall through to name-based selection
+            }
+        }
         return items.stream()
-            .filter(item -> nameExtractor.apply(item).equalsIgnoreCase(trimmed))
-            .findFirst()
-            .orElse(null);
+                .filter(item -> nameExtractor.apply(item).equalsIgnoreCase(trimmed))
+                .findFirst()
+                .orElse(null);
     }
-}
 
     /**
      * Executes confirmed dependency deletion
@@ -670,7 +676,7 @@ public class DeletionCommandService {
      */
 
     /**
-     * ETAPA 6: Execute confirmed deletion (soft delete)
+     * Execute confirmed deletion (soft delete)
      * Action format: "delete-component-123" where 123 is the component ID
      */
     public CommandResponse executeConfirmedDelete(String action, FormState sessionState) {
@@ -699,28 +705,8 @@ public class DeletionCommandService {
         }
 
         // Perform soft delete
-        String componentName = component.getName();
         component.setDeleted(true);
         deploymentUnitRepository.save(component);
-
-        // If we're currently inside the deleted component, navigate to parent
-        String currentDir = sessionState.getCurrentDirectory();
-        if (currentDir != null && !"root".equals(currentDir)) {
-            NavigationPath currentPath = pathNavigationService.createPath(currentDir);
-            if (currentPath != null && currentPath.getType() == PathType.COMPONENT_IN_FOLDER ||
-                    currentPath.getType() == PathType.COMPONENT_IN_DULIB ||
-                    currentPath.getType() == PathType.COMPONENT_STANDALONE) {
-                // Check if the current component matches the deleted one
-                if (componentName.equals(currentPath.getComponentName())) {
-                    // Navigate to parent (the folder containing this component)
-                    String parentPath = currentPath.getDuName();
-                    if (currentPath.getFolderName() != null) {
-                        parentPath = parentPath + "/" + currentPath.getFolderName();
-                    }
-                    sessionState.setCurrentDirectory(parentPath);
-                }
-            }
-        }
 
         // Notify frontend to update diagram
         diagramService.notifyDiagramUpdate();
@@ -733,4 +719,5 @@ public class DeletionCommandService {
 
         return CommandResponse.success(message.toString());
     }
+
 }
