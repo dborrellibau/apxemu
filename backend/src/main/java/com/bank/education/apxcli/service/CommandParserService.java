@@ -9,6 +9,8 @@ import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.service.educational.EducationalHintService;
 import com.bank.education.apxcli.service.tutorial.TutorialStepResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -30,6 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 public class CommandParserService {
+
+    private static final Logger log = LoggerFactory.getLogger(CommandParserService.class);
 
     private final CommandHandlerRegistry handlerRegistry;
     private final PathNavigationService pathNavigationService;
@@ -95,13 +99,14 @@ public class CommandParserService {
         }
         
         // Add educational hint based on mode
-        if (isTutorialActive) {
+        // Note: Skip if tutorial command (it manages its own hints)
+        if (isTutorialActive && !isTutorialCommand) {
             // Tutorial mode: always show tutorial hint (even if command failed)
             String tutorialHint = tutorialHandler.generateTutorialHint(sessionState);
             if (tutorialHint != null) {
                 response.setEducationalHint(tutorialHint);
             }
-        } else if (response.isSuccess()) {
+        } else if (!isTutorialActive && response.isSuccess()) {
             // Normal mode: show contextual educational hint only on success
             PathType currentPathType = pathNavigationService.resolvePathType(
                     sessionState.getCurrentDirectory());
@@ -114,6 +119,13 @@ public class CommandParserService {
 
         // Always set current prompt
         response.setPrompt(sessionState.getCurrentPrompt());
+
+        // Log final response state
+        log.info("Final response - command: {}, isTutorialCommand: {}, hint present: {}, hint length: {}", 
+            request.getCommand(), 
+            isTutorialCommand,
+            response.getEducationalHint() != null,
+            response.getEducationalHint() != null ? response.getEducationalHint().length() : 0);
 
         return response;
     }

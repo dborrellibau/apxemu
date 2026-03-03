@@ -6,6 +6,8 @@ import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.model.tutorial.TutorialProgress;
 import com.bank.education.apxcli.service.tutorial.TutorialService;
 import com.bank.education.apxcli.service.tutorial.TutorialStepResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TutorialCommandHandler extends CommandHandler {
     
+    private static final Logger log = LoggerFactory.getLogger(TutorialCommandHandler.class);
     private final TutorialService tutorialService;
     
     public static final int PRIORITY = 20;
@@ -48,15 +51,14 @@ public class TutorialCommandHandler extends CommandHandler {
     
     @Override
     public CommandResponse handle(CommandRequest request, FormState sessionState) {
-        String command = request.getCommand().trim().toLowerCase();
+        String[] args = request.getArgs();
         
-        // Parse subcommand
-        String[] parts = command.split("\\s+");
-        if (parts.length < 2) {
+        // Parse subcommand from args
+        if (args == null || args.length == 0) {
             return showHelpMessage();
         }
         
-        String subCommand = parts[1];
+        String subCommand = args[0].toLowerCase();
         
         switch (subCommand) {
             case "start":
@@ -115,10 +117,15 @@ public class TutorialCommandHandler extends CommandHandler {
         return progress != null && progress.isTutorialMode();
     }
     
-    // ============ Private Handlers ============
+    //============ Private Handlers ============
     
     private CommandResponse handleStart(FormState sessionState) {
-        return tutorialService.startTutorial(sessionState);
+        log.info("Executing tutorial start command");
+        CommandResponse response = tutorialService.startTutorial(sessionState);
+        log.info("Tutorial start response - hint present: {}, hint length: {}", 
+            response.getEducationalHint() != null,
+            response.getEducationalHint() != null ? response.getEducationalHint().length() : 0);
+        return response;
     }
     
     private CommandResponse handleHint(FormState sessionState) {

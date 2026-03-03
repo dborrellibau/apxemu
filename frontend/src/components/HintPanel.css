@@ -67,6 +67,15 @@
   margin-bottom: 8px;
   border-radius: 4px;
   animation: fadeInSlide 0.4s ease;
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+/* Tutorial Mode Styling */
+.hint-card.tutorial-mode {
+  background: linear-gradient(135deg, #1a1240 0%, #2d1b4e 100%);
+  border-left: 3px solid #9b59b6;
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.2);
 }
 
 @keyframes fadeInSlide {
@@ -86,6 +95,31 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* Markdown Elements in Tutorial Mode */
+.hint-card.tutorial-mode .hint-content strong {
+  color: #bb86fc;
+  font-weight: 600;
+}
+
+.hint-card.tutorial-mode .hint-content code {
+  background: rgba(0, 0, 0, 0.3);
+  color: #64ffda;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+/* Regular hint code styling */
+.hint-content code {
+  background: rgba(255, 255, 255, 0.1);
+  color: #4a9eff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
 }
 
 
