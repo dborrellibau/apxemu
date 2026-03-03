@@ -1,5 +1,7 @@
 package com.bank.education.apxcli.dto;
 
+import com.bank.education.apxcli.model.tutorial.TutorialProgress;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +27,9 @@ public class FormState {
     // Confirmation flow - stores action string like "delete-component-123" or null
     private String awaitingConfirmationFor;
     
+    // Tutorial mode - tracks user progress through tutorial levels
+    private TutorialProgress tutorialProgress;
+    
     public FormState() {
         this.formData = new HashMap<>();
         this.currentDirectory = "root";
@@ -36,6 +41,7 @@ public class FormState {
         this.inOutSelectionMode = false;
         this.awaitingInOutDtoName = false;
         this.awaitingConfirmationFor = null;
+        this.tutorialProgress = null;
     }
     
     public FormState(String formType) {
@@ -240,6 +246,20 @@ public class FormState {
         this.formData.remove("inOutMode");
         this.formData.remove("inOutComponent");
     }
+    
+    /**
+     * Gets current tutorial progress (null if not in tutorial mode)
+     */
+    public TutorialProgress getTutorialProgress() {
+        return tutorialProgress;
+    }
+    
+    /**
+     * Sets tutorial progress
+     */
+    public void setTutorialProgress(TutorialProgress tutorialProgress) {
+        this.tutorialProgress = tutorialProgress;
+    }
 
     public void reset() {
     this.formType = null;
@@ -254,5 +274,6 @@ public class FormState {
     this.inOutSelectionMode = false;
     this.awaitingInOutDtoName = false;
     this.awaitingConfirmationFor = null;
+    this.tutorialProgress = null;
 }
 }
