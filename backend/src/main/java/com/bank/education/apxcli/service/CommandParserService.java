@@ -4,9 +4,11 @@ import com.bank.education.apxcli.dto.CommandRequest;
 import com.bank.education.apxcli.dto.CommandResponse;
 import com.bank.education.apxcli.dto.FormState;
 import com.bank.education.apxcli.handler.CommandHandlerRegistry;
+import com.bank.education.apxcli.handler.TutorialCommandHandler;
 import com.bank.education.apxcli.navigation.PathNavigationService;
 import com.bank.education.apxcli.navigation.model.PathType;
 import com.bank.education.apxcli.service.educational.EducationalHintService;
+import com.bank.education.apxcli.service.tutorial.TutorialStepResult;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -18,8 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Responsibilities:
  * 1. Session management (activeSessions map)
  * 2. Delegation to CommandHandlerRegistry for command routing
- * 3. Educational hint injection on successful commands
- * 4. Prompt management
+ * 3. Tutorial mode integration and step validation
+ * 4. Educational hint injection on successful commands
+ * 5. Prompt management
  * 
  * All command processing logic has been moved to specialized CommandHandler
  * implementations.
@@ -31,15 +34,18 @@ public class CommandParserService {
     private final CommandHandlerRegistry handlerRegistry;
     private final PathNavigationService pathNavigationService;
     private final EducationalHintService hintService;
+    private final TutorialCommandHandler tutorialHandler;
 
     private final Map<String, FormState> activeSessions = new ConcurrentHashMap<>();
 
     public CommandParserService(CommandHandlerRegistry handlerRegistry,
             PathNavigationService pathNavigationService,
-            EducationalHintService hintService) {
+            EducationalHintService hintService,
+            TutorialCommandHandler tutorialHandler) {
         this.handlerRegistry = handlerRegistry;
         this.pathNavigationService = pathNavigationService;
         this.hintService = hintService;
+        this.tutorialHandler = tutorialHandler;
 
         // Clear any residual sessions on startup
         this.activeSessions.clear();
@@ -48,6 +54,11 @@ public class CommandParserService {
     /**
      * Main entry point for command processing
      * Delegates to CommandHandlerRegistry which routes to appropriate handler
+     * 
+     * Tutorial integration:
+     * - After command execution, validates if it fulfills current tutorial step
+     * - Provides tutorial hints instead of normal educational hints when tutorial is active
+     * - Shows step completion messages and level progression feedback
      * 
      * @param request Command request containing command text, args, and session ID
      * @return Command response with output, status, prompt, and optional hints
@@ -68,15 +79,33 @@ public class CommandParserService {
             sessionState = response.getNewSessionState();
         }
 
-        // Add educational hint if command was successful
-        if (response.isSuccess()) {
+        // Tutorial mode integration
+        boolean isTutorialActive = tutorialHandler.isInTutorialMode(sessionState);
+        boolean isTutorialCommand = request.getCommand().trim().toLowerCase().startsWith("tutorial");
+        
+        // If tutorial is active and command executed successfully (but not a tutorial command itself)
+        if (isTutorialActive && !isTutorialCommand && response.isSuccess()) {
+            TutorialStepResult stepResult = tutorialHandler.validateStepAfterExecution(
+                buildFullCommand(request), 
+                sessionState
+            );
+            
+            // Process tutorial validation result
+            response = processTutorialStepResult(response, stepResult, sessionState);
+        }
+        
+        // Add educational hint based on mode
+        if (isTutorialActive) {
+            // Tutorial mode: always show tutorial hint (even if command failed)
+            String tutorialHint = tutorialHandler.generateTutorialHint(sessionState);
+            if (tutorialHint != null) {
+                response.setEducationalHint(tutorialHint);
+            }
+        } else if (response.isSuccess()) {
+            // Normal mode: show contextual educational hint only on success
             PathType currentPathType = pathNavigationService.resolvePathType(
                     sessionState.getCurrentDirectory());
-            String fullCommand = request.getCommand();
-            String[] args = request.getArgs();
-            if (args != null && args.length > 0) {
-                fullCommand += " " + args[0];
-            }
+            String fullCommand = buildFullCommand(request);
             String hint = hintService.getHintFor(fullCommand, currentPathType);
             if (hint != null) {
                 response.setEducationalHint(hint);
@@ -87,6 +116,64 @@ public class CommandParserService {
         response.setPrompt(sessionState.getCurrentPrompt());
 
         return response;
+    }
+    
+    /**
+     * Builds full command string from request (command + args)
+     */
+    private String buildFullCommand(CommandRequest request) {
+        String fullCommand = request.getCommand();
+        String[] args = request.getArgs();
+        if (args != null && args.length > 0) {
+            fullCommand += " " + args[0];
+        }
+        return fullCommand;
+    }
+    
+    /**
+     * Processes tutorial step validation result and enriches response with feedback
+     */
+    private CommandResponse processTutorialStepResult(CommandResponse originalResponse, 
+                                                       TutorialStepResult stepResult, 
+                                                       FormState sessionState) {
+        if (!stepResult.isSuccess()) {
+            // Step validation failed - command executed but didn't fulfill tutorial objective
+            String failureMessage = "\n\n❌ " + stepResult.getErrorMessage();
+            
+            // Preserve original success response but add tutorial feedback
+            originalResponse.setMessage(originalResponse.getMessage() + failureMessage);
+            return originalResponse;
+        }
+        
+        // Step succeeded
+        if (stepResult.isTutorialCompleted()) {
+            // Tutorial completely finished
+            String completionMessage = originalResponse.getMessage() + 
+                "\n\n🎉 **¡Felicitaciones! Tutorial Completado** 🎉\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+                "Has completado todos los niveles del tutorial.\n" +
+                "Pasos completados: " + stepResult.getTotalSteps() + "\n" +
+                "Hints usadas: " + stepResult.getHintsUsed() + "\n\n" +
+                "Has dominado los fundamentos de APX CLI. " +
+                "Ahora puedes explorar libremente el sistema.";
+            originalResponse.setMessage(completionMessage);
+            
+        } else if (stepResult.isLevelCompleted()) {
+            // Level finished, advancing to next level
+            String levelMessage = originalResponse.getMessage() + 
+                "\n\n⭐ **¡Nivel " + stepResult.getCompletedLevelNumber() + " Completado!** ⭐\n" +
+                "Excelente trabajo. Avanzando al siguiente nivel...\n\n" +
+                "Continúa siguiendo las instrucciones en el panel educativo.";
+            originalResponse.setMessage(levelMessage);
+            
+        } else {
+            // Normal step completion
+            String successMessage = originalResponse.getMessage() + 
+                "\n\n✅ " + stepResult.getSuccessMessage();
+            originalResponse.setMessage(successMessage);
+        }
+        
+        return originalResponse;
     }
 
     /**
