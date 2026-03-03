@@ -156,6 +156,12 @@ public class CommandHandlerRegistry {
         .filter(h -> h.getName().equals("ResetCommandHandler"))
         .findFirst()
         .ifPresent(resetHandler -> map.put("reset", resetHandler));
+        
+        // Register tutorial command for O(1) lookup
+        handlers.stream()
+        .filter(h -> h.getName().equals("TutorialCommandHandler"))
+        .findFirst()
+        .ifPresent(tutorialHandler -> map.put("tutorial", tutorialHandler));
 
         return map;
     }
