@@ -152,11 +152,12 @@ const Terminal = ({ wsService, isConnected, onHintReceived }) => {
         return;
       }
   
-      // 2) Description: mínimo 5 caracteres totales
-      if (promptLower.includes('description') && trimmedInput.length < 5) {
+      // 2) Description: mínimo 5 caracteres no vacíos (ignora espacios)
+      const nonWhitespaceLength = trimmedInput.replace(/\s+/g, '').length;
+      if (promptLower.includes('description') && nonWhitespaceLength < 5) {
         setHistory(prev => [
           ...prev,
-          { type: 'error', content: 'Description must be at least 5 characters. Try again:' },
+          { type: 'error', content: 'Description must be at least 5 non-space characters. Try again:' },
           { type: 'prompt', content: '' }
         ]);
         return;

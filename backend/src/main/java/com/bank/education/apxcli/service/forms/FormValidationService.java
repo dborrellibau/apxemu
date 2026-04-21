@@ -139,8 +139,9 @@ public class FormValidationService {
     }
     
     private CommandResponse validateDescription(String input) {
-        if (input.length() < 5) {
-            return CommandResponse.error("Description must be at least 5 characters long. Try again:");
+        int nonWhitespaceChars = input.replaceAll("\\s+", "").length();
+        if (nonWhitespaceChars < 5) {
+            return CommandResponse.error("Description must be at least 5 non-space characters long. Try again:");
         }
         return CommandResponse.success("Valid input");
     }
