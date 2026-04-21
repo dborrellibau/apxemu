@@ -67,20 +67,21 @@
 .terminal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 15px;
   font-family: 'Courier New', monospace;
 }
 
 .terminal-content {
   min-height: 100%;
+  min-width: max-content;
   display: flex;
   flex-direction: column;
 }
 
 .terminal-line {
   margin: 2px 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
 }
 
 .terminal-line.command {
@@ -116,6 +117,7 @@
   display: flex;
   align-items: center;
   margin: 5px 0;
+  white-space: nowrap;
 }
 
 .prompt {
@@ -131,8 +133,10 @@
   font-size: 14px;
   outline: none;
   flex: 1;
+  min-width: 120px;
   caret-color: #00ff00;
   font-family: 'Courier New', monospace;
+  white-space: pre;
 }
 
 .terminal-input::selection {
