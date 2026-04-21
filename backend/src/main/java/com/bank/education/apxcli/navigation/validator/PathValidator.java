@@ -7,6 +7,7 @@ import com.bank.education.apxcli.repository.DeploymentUnitRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -63,7 +64,7 @@ public class PathValidator {
         if (duName == null || duName.trim().isEmpty()) {
             return false;
         }
-        return deploymentUnitRepository.findByName(duName).isPresent();
+        return deploymentUnitRepository.findByNameIgnoreCase(duName).isPresent();
     }
 
     /**
@@ -75,7 +76,7 @@ public class PathValidator {
             return false;
         }
 
-        Optional<DeploymentUnit> parentDuOpt = deploymentUnitRepository.findByName(duName);
+        Optional<DeploymentUnit> parentDuOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
         if (!parentDuOpt.isPresent()) {
             return false;
         }
@@ -84,7 +85,7 @@ public class PathValidator {
         
         // Buscar en los child deployment units
         return parentDu.getChildDeploymentUnits().stream()
-                .anyMatch(child -> child.getName().equals(componentName));
+                .anyMatch(child -> child.getName().equalsIgnoreCase(componentName));
     }
 
     /**
@@ -96,7 +97,7 @@ public class PathValidator {
             return false;
         }
 
-        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByName(duName);
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
         if (!duOpt.isPresent()) {
             return false;
         }
@@ -116,7 +117,7 @@ public class PathValidator {
         
         // Buscar el componente en containedUnits
         return folder.getContainedUnits().stream()
-                .anyMatch(component -> component.getName().equals(componentName));
+                .anyMatch(component -> component.getName().equalsIgnoreCase(componentName));
     }
 
     /**
@@ -128,7 +129,7 @@ public class PathValidator {
             return false;
         }
 
-        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByName(duName);
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
         if (!duOpt.isPresent()) {
             return false;
         }
@@ -149,5 +150,84 @@ public class PathValidator {
         }
         // Solo letras, números, guiones y guiones bajos
         return name.matches("^[a-zA-Z0-9_-]+$");
+    }
+
+    /**
+     * Resuelve nombre canónico de DU para mostrar casing original.
+     */
+    public Optional<String> resolveCanonicalDeploymentUnitName(String duName) {
+        if (duName == null || duName.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        return deploymentUnitRepository.findByNameIgnoreCase(duName)
+                .map(DeploymentUnit::getName);
+    }
+
+    /**
+     * Resuelve nombre canónico de carpeta.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> resolveCanonicalFolderName(String duName, String folderName) {
+        if (duName == null || folderName == null) {
+            return Optional.empty();
+        }
+
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
+        if (!duOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        return duOpt.get().getChildComponentFolders().stream()
+                .filter(folder -> folder.getType().name().equalsIgnoreCase(folderName))
+                .findFirst()
+                .map(folder -> folder.getType().name().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Resuelve nombre canónico de componente en DU_LIB.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> resolveCanonicalComponentInDuName(String duName, String componentName) {
+        if (duName == null || componentName == null) {
+            return Optional.empty();
+        }
+
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
+        if (!duOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        return duOpt.get().getChildDeploymentUnits().stream()
+                .filter(child -> child.getName().equalsIgnoreCase(componentName))
+                .findFirst()
+                .map(DeploymentUnit::getName);
+    }
+
+    /**
+     * Resuelve nombre canónico de componente dentro de carpeta.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> resolveCanonicalComponentInFolderName(String duName, String folderName, String componentName) {
+        if (duName == null || folderName == null || componentName == null) {
+            return Optional.empty();
+        }
+
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
+        if (!duOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        Optional<ComponentFolder> folderOpt = duOpt.get().getChildComponentFolders().stream()
+                .filter(folder -> folder.getType().name().equalsIgnoreCase(folderName))
+                .findFirst();
+
+        if (!folderOpt.isPresent()) {
+            return Optional.empty();
+        }
+
+        return folderOpt.get().getContainedUnits().stream()
+                .filter(component -> component.getName().equalsIgnoreCase(componentName))
+                .findFirst()
+                .map(DeploymentUnit::getName);
     }
 }

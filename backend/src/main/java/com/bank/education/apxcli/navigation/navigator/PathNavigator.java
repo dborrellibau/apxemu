@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Maneja operaciones de navegación para el comando cd
@@ -81,8 +82,11 @@ public class PathNavigator {
             return null; // No existe
         }
 
+        // Normalizar casing con nombres canónicos almacenados en BD.
+        List<String> canonicalSegments = normalizeSegmentsWithCanonicalNames(finalSegments, targetType);
+
         // Crear NavigationPath destino
-        return createNavigationPath(finalSegments, targetType);
+        return createNavigationPath(canonicalSegments, targetType);
     }
 
     /**
@@ -171,5 +175,35 @@ public class PathNavigator {
         }
         
         return new NavigationPath(segments, type, parentType);
+    }
+
+    private List<String> normalizeSegmentsWithCanonicalNames(List<String> segments, PathType type) {
+        if (segments == null || segments.isEmpty()) {
+            return segments;
+        }
+
+        List<String> canonical = new ArrayList<>(segments);
+
+        Optional<String> canonicalDuName = pathValidator.resolveCanonicalDeploymentUnitName(segments.get(0));
+        canonicalDuName.ifPresent(name -> canonical.set(0, name));
+
+        if (segments.size() >= 2 && type == PathType.FOLDER) {
+            pathValidator.resolveCanonicalFolderName(canonical.get(0), segments.get(1))
+                    .ifPresent(name -> canonical.set(1, name));
+        }
+
+        if (segments.size() >= 2 && type == PathType.COMPONENT_IN_DULIB) {
+            pathValidator.resolveCanonicalComponentInDuName(canonical.get(0), segments.get(1))
+                    .ifPresent(name -> canonical.set(1, name));
+        }
+
+        if (segments.size() >= 3 && type == PathType.COMPONENT_IN_FOLDER) {
+            pathValidator.resolveCanonicalFolderName(canonical.get(0), segments.get(1))
+                    .ifPresent(name -> canonical.set(1, name));
+            pathValidator.resolveCanonicalComponentInFolderName(canonical.get(0), canonical.get(1), segments.get(2))
+                    .ifPresent(name -> canonical.set(2, name));
+        }
+
+        return canonical;
     }
 }

@@ -48,7 +48,7 @@ public class PathTypeResolver {
         }
 
         // Consultar BD para obtener el DU
-        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByName(duName);
+        Optional<DeploymentUnit> duOpt = deploymentUnitRepository.findByNameIgnoreCase(duName);
         
         if (!duOpt.isPresent()) {
             // Nivel 1 sin DU en BD = componente standalone

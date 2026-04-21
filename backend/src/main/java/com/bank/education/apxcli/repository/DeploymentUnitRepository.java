@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface DeploymentUnitRepository extends JpaRepository<DeploymentUnit, Long> {
     
     Optional<DeploymentUnit> findByName(String name);
+    Optional<DeploymentUnit> findByNameIgnoreCase(String name);
     
     List<DeploymentUnit> findByType(DeploymentUnit.DeploymentUnitType type);
     
